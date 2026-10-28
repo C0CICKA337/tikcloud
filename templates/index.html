@@ -38,7 +38,7 @@
             Загрузчик <span class="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-teal-400">TikCloud</span>
         </h1>
         <p class="text-sm text-gray-500 dark:text-gray-400 text-center mb-8">
-            Скачивайте видео в любом разрешении, MP3 и фото-карусели из TikTok без водяных знаков.
+            Скачивайте видео в HD и SD, MP3 и фото-карусели из TikTok без водяных знаков.
         </p>
 
         <!-- Переключатель вкладок -->
@@ -76,26 +76,19 @@
                 </div>
             </div>
 
-            <!-- Полный выбор разрешений и кнопка -->
-            <div class="flex gap-2 items-center">
-                <select id="resolutionSelect" class="flex-1 bg-gray-50 dark:bg-[#0d111a] border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-200 text-xs rounded-xl px-3 py-3.5 focus:outline-none focus:ring-2 focus:ring-pink-500">
-                    <option value="4k">🌟 Видео 4K (Ultra HD)</option>
-                    <option value="2k">💎 Видео 2K (QHD)</option>
-                    <option value="1080" selected>🔥 Видео 1080p (Full HD)</option>
-                    <option value="720">📹 Видео 720p (HD)</option>
-                    <option value="480">📱 Видео 480p (Стандарт)</option>
-                    <option value="360">📉 Видео 360p (Эконом)</option>
-                    <option value="240">⚡ Видео 240p (Минимум)</option>
-                    <option value="144">🔻 Видео 144p (Ультра сжатие)</option>
-                </select>
-                <button onclick="downloadVideo()" class="py-3.5 px-6 bg-pink-600 hover:bg-pink-700 rounded-xl font-semibold text-xs text-center transition shadow-md text-white whitespace-nowrap">
-                    📥 Скачать видео
+            <!-- Кнопки выбора HD / SD -->
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="downloadMedia('hd')" class="py-3 bg-pink-600 hover:bg-pink-700 rounded-xl font-semibold text-xs text-center transition shadow-md text-white">
+                    🔥 Скачать HD
+                </button>
+                <button onclick="downloadMedia('sd')" class="py-3 bg-indigo-600 hover:bg-indigo-700 rounded-xl font-semibold text-xs text-center transition shadow-md text-white">
+                    📹 Скачать SD
                 </button>
             </div>
 
             <!-- Отдельная кнопка для MP3 -->
-            <button onclick="downloadAudio()" class="w-full py-3 bg-gray-200 dark:bg-[#1c2333] hover:bg-gray-300 dark:hover:bg-[#252f45] text-gray-800 dark:text-white rounded-xl font-semibold text-xs text-center transition border border-gray-300 dark:border-gray-700 flex items-center justify-center gap-2">
-                🎵 Скачать отдельно MP3
+            <button onclick="downloadMedia('audio')" class="w-full py-3 bg-gray-200 dark:bg-[#1c2333] hover:bg-gray-300 dark:hover:bg-[#252f45] text-gray-800 dark:text-white rounded-xl font-semibold text-xs text-center transition border border-gray-300 dark:border-gray-700 flex items-center justify-center gap-2">
+                🎵 Скачать MP3
             </button>
         </div>
     </main>
@@ -188,7 +181,7 @@
             }
         }
 
-        function downloadVideo() {
+        async function downloadMedia(type) {
             const errorBox = document.getElementById('errorBox');
             errorBox.classList.add('hidden');
 
@@ -198,43 +191,40 @@
                 return;
             }
 
-            const resolution = document.getElementById('resolutionSelect').value;
-            
-            // Динамически меняем ссылку в зависимости от выбранного качества в списке
-            let mediaLink = cachedMediaData.play;
-            
-            if (['4k', '2k', '1080', '720'].includes(resolution)) {
+            let mediaLink = '';
+            let fileName = 'tiktok_video.mp4';
+
+            if (type === 'hd') {
                 mediaLink = cachedMediaData.hdplay || cachedMediaData.play;
-            } else if (['480', '360'].includes(resolution)) {
-                // Если API поддерживает стандартный поток, берем его
+                fileName = 'tiktok_hd.mp4';
+            } else if (type === 'sd') {
                 mediaLink = cachedMediaData.play;
-            } else {
-                // Для низких (240, 144) подставляем стандартный поток с принудительным скачиванием
-                mediaLink = cachedMediaData.play;
+                fileName = 'tiktok_sd.mp4';
+            } else if (type === 'audio') {
+                mediaLink = cachedMediaData.music;
+                fileName = 'tiktok_audio.mp3';
             }
 
             if (!mediaLink) {
-                errorBox.innerText = 'Ссылка на выбранное качество недоступна';
+                errorBox.innerText = 'Ссылка на файл не найдена';
                 errorBox.classList.remove('hidden');
                 return;
             }
 
-            // Прямой переход для скачивания нужного потока
-            const a = document.createElement('ahref');
-            window.open(mediaLink, '_blank');
-        }
-
-        function downloadAudio() {
-            const errorBox = document.getElementById('errorBox');
-            errorBox.classList.add('hidden');
-
-            if (!cachedMediaData || !cachedMediaData.music) {
-                errorBox.innerText = 'Аудиодорожка недоступна';
-                errorBox.classList.remove('hidden');
-                return;
+            try {
+                const res = await fetch(mediaLink);
+                const blob = await res.blob();
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(downloadUrl);
+            } catch (err) {
+                window.open(mediaLink, '_blank');
             }
-
-            window.open(cachedMediaData.music, '_blank');
         }
     </script>
 </body>
