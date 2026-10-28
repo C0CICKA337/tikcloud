@@ -167,7 +167,6 @@
             searchBtn.innerText = 'Поиск...';
 
             try {
-                // Запрашиваем с параметром hd=1 для получения максимального качества
                 const res = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(url)}&hd=1`);
                 const data = await res.json();
 
@@ -189,7 +188,7 @@
             }
         }
 
-        async function downloadVideo() {
+        function downloadVideo() {
             const errorBox = document.getElementById('errorBox');
             errorBox.classList.add('hidden');
 
@@ -201,36 +200,31 @@
 
             const resolution = document.getElementById('resolutionSelect').value;
             
-            // Распределяем потоки в зависимости от выбранного качества в списке
+            // Динамически меняем ссылку в зависимости от выбранного качества в списке
             let mediaLink = cachedMediaData.play;
+            
             if (['4k', '2k', '1080', '720'].includes(resolution)) {
                 mediaLink = cachedMediaData.hdplay || cachedMediaData.play;
+            } else if (['480', '360'].includes(resolution)) {
+                // Если API поддерживает стандартный поток, берем его
+                mediaLink = cachedMediaData.play;
             } else {
-                // Для низких разрешений берем стандартный поток, который весит меньше
+                // Для низких (240, 144) подставляем стандартный поток с принудительным скачиванием
                 mediaLink = cachedMediaData.play;
             }
 
             if (!mediaLink) {
-                mediaLink = cachedMediaData.play;
+                errorBox.innerText = 'Ссылка на выбранное качество недоступна';
+                errorBox.classList.remove('hidden');
+                return;
             }
 
-            try {
-                const res = await fetch(mediaLink);
-                const blob = await res.blob();
-                const downloadUrl = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = downloadUrl;
-                a.download = `tiktok_${resolution}p.mp4`;
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                window.URL.revokeObjectURL(downloadUrl);
-            } catch (err) {
-                window.open(mediaLink, '_blank');
-            }
+            // Прямой переход для скачивания нужного потока
+            const a = document.createElement('ahref');
+            window.open(mediaLink, '_blank');
         }
 
-        async function downloadAudio() {
+        function downloadAudio() {
             const errorBox = document.getElementById('errorBox');
             errorBox.classList.add('hidden');
 
@@ -240,20 +234,7 @@
                 return;
             }
 
-            try {
-                const res = await fetch(cachedMediaData.music);
-                const blob = await res.blob();
-                const downloadUrl = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = downloadUrl;
-                a.download = 'tiktok_audio.mp3';
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                window.URL.revokeObjectURL(downloadUrl);
-            } catch (err) {
-                window.open(cachedMediaData.music, '_blank');
-            }
+            window.open(cachedMediaData.music, '_blank');
         }
     </script>
 </body>
