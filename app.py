@@ -10,13 +10,12 @@ def index():
 
 @app.route('/get-info', methods=['POST'])
 def get_info():
-    data = request.json
+    data = request.json or {}
     url = data.get('url')
     if not url:
         return jsonify({'error': 'Не указана ссылка'}), 400
 
     try:
-        # Используем быстрое публичное API для получения прямой информации о видео TikTok
         api_url = f"https://tikwm.com/api/?url={url}"
         response = requests.get(api_url, timeout=10)
         res_data = response.json()
@@ -26,23 +25,16 @@ def get_info():
             return jsonify({
                 'title': info.get('title', 'Видео TikTok'),
                 'thumbnail': info.get('cover', ''),
-                'duration': info.get('duration', 0),
-                'formats': [{'height': 720}, {'height': 480}, {'height': 360}]
+                'duration': info.get('duration', 0)
             })
-    except Exception:
-        pass
-
-    # Заглушка на случай сбоя сети, чтобы интерфейс не ломался
-    return jsonify({
-        'title': 'Видео TikTok',
-        'thumbnail': '',
-        'duration': 0,
-        'formats': [{'height': 720}, {'height': 480}, {'height': 360}]
-    })
+        else:
+            return jsonify({'error': 'Не удалось найти видео по этой ссылке'}), 400
+    except Exception as e:
+        return jsonify({'error': f'Ошибка сервера: {str(e)}'}), 500
 
 @app.route('/download', methods=['POST'])
 def download():
-    data = request.json
+    data = request.json or {}
     url = data.get('url')
     download_type = data.get('type', 'video')
 
@@ -50,25 +42,18 @@ def download():
         return jsonify({'error': 'Не указана ссылка'}), 400
 
     try:
-        # Получаем прямую ссылку на медиафайл через надежный API-парсер
         api_url = f"https://tikwm.com/api/?url={url}"
         response = requests.get(api_url, timeout=10)
         res_data = response.json()
 
         if res_data.get('code') == 0:
             info = res_data.get('data', {})
-            
-            if download_type == 'audio':
-                media_link = info.get('music') # Ссылка на аудио
-            else:
-                media_link = info.get('play') # Ссылка на видео без водяных знаков
+            media_link = info.get('music') if download_type == 'audio' else info.get('play')
 
             if media_link:
-                # Перенаправляем пользователя на прямую загрузку файла
                 return jsonify({'redirect_url': media_link})
 
-        return jsonify({'error': 'Не удалось получить ссылку на скачивание от TikTok'}), 500
-
+        return jsonify({'error': 'Ссылка на медиафайл не найдена'}), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
