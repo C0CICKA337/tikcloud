@@ -8,6 +8,11 @@ DOWNLOAD_FOLDER = 'downloads'
 if not os.path.exists(DOWNLOAD_FOLDER):
     os.makedirs(DOWNLOAD_FOLDER)
 
+# Заголовки, чтобы API думало, что запрос идет от браузера
+HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+}
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -21,7 +26,11 @@ def get_info():
 
     try:
         api_url = f"https://tikwm.com/api/?url={url}"
-        response = requests.get(api_url, timeout=10)
+        response = requests.get(api_url, headers=HEADERS, timeout=10)
+        
+        if response.status_code != 200:
+            return jsonify({'error': f'Внешнее API вернуло статус {response.status_code}'}), 400
+
         res_data = response.json()
 
         if res_data.get('code') == 0:
@@ -31,14 +40,12 @@ def get_info():
                 'thumbnail': info.get('cover', ''),
                 'duration': info.get('duration', 0)
             })
+        else:
+            return jsonify({'error': 'Не удалось найти видео по этой ссылке. Проверьте правильность URL.'}), 400
+
     except Exception as e:
         print(f"Error in get_info: {e}")
-
-    return jsonify({
-        'title': 'Видео TikTok',
-        'thumbnail': '',
-        'duration': 0
-    })
+        return jsonify({'error': f'Ошибка сервера: {str(e)}'}), 500
 
 @app.route('/download', methods=['POST'])
 def download():
@@ -51,7 +58,7 @@ def download():
 
     try:
         api_url = f"https://tikwm.com/api/?url={url}"
-        response = requests.get(api_url, timeout=15)
+        response = requests.get(api_url, headers=HEADERS, timeout=15)
         res_data = response.json()
 
         if res_data.get('code') == 0:
@@ -59,7 +66,7 @@ def download():
             media_link = info.get('music') if download_type == 'audio' else info.get('play')
 
             if media_link:
-                file_res = requests.get(media_link, stream=True, timeout=20)
+                file_res = requests.get(media_link, headers=HEADERS, stream=True, timeout=20)
                 ext = 'mp3' if download_type == 'audio' else 'mp4'
                 temp_filename = os.path.join(DOWNLOAD_FOLDER, f"temp_{os.getpid()}.{ext}")
                 
@@ -69,9 +76,10 @@ def download():
                 
                 return send_file(temp_filename, as_attachment=True, download_name=f"tiktok.{ext}")
 
-        return jsonify({'error': 'Не удалось получить ссылку на файл от API'}), 400
+        return jsonify({'error': 'Ссылка на медиафайл не найдена'}), 400
 
     except Exception as e:
+        print(f"Error in download: {e}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
