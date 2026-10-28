@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TikCloud — Облачный загрузчик видео и фото из TikTok</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-text {
+            background: linear-gradient(135deg, #fe2c55 0%, #25f4ee 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .glow-btn {
+            background: linear-gradient(135deg, #fe2c55 0%, #ff0055 100%);
+            transition: all 0.3s ease;
+        }
+        .glow-btn:hover {
+            box-shadow: 0 0 20px rgba(254, 44, 85, 0.5);
+            transform: translateY(-1px);
+        }
+        .tab-active {
+            background: linear-gradient(135deg, #fe2c55 0%, #ff0055 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(254, 44, 85, 0.4);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between bg-gray-50 dark:bg-[#0f1015] text-gray-900 dark:text-[#f3f4f6] selection:bg-[#fe2c55] selection:text-white transition-colors duration-300">
+
+    <!-- Хэдер -->
+    <header class="border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-[#161823]/80 backdrop-blur-md sticky top-0 z-50 transition-colors duration-300">
+        <div class="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#fe2c55] to-[#25f4ee] flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                    <i class="fa-solid fa-cloud"></i>
+                </div>
+                <span class="text-xl font-bold tracking-tight">Tik<span class="gradient-text font-black">Cloud</span></span>
+            </div>
+            
+            <div class="flex items-center space-x-3">
+                <!-- Кнопка темы -->
+                <button onclick="toggleTheme()" class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:scale-105 transition cursor-pointer" title="Сменить тему">
+                    <i id="themeIcon" class="fa-solid fa-moon"></i>
+                </button>
+                <div class="hidden sm:block text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800/60 px-3 py-1.5 rounded-full border border-gray-200 dark:border-gray-700">
+                    <i class="fa-solid fa-bolt text-[#25f4ee] mr-1"></i> Cloud Fast
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Основной контент -->
+    <main class="max-w-2xl mx-auto px-4 py-12 w-full flex-grow">
+        
+        <!-- Заголовок -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-extrabold mb-3">
+                Загрузчик <span class="gradient-text">TikCloud</span>
+            </h1>
+            <p class="text-gray-500 dark:text-gray-400 text-sm sm:text-base">
+                Скачивайте видео, MP3 и фото-карусели из TikTok без водяных знаков.
+            </p>
+        </div>
+
+        <!-- Переключатель вкладок -->
+        <div class="flex justify-center mb-8">
+            <div class="bg-white dark:bg-[#161823] p-1.5 rounded-2xl border border-gray-200 dark:border-gray-800 flex space-x-2 w-full max-w-sm shadow-sm dark:shadow-inner transition-colors duration-300">
+                <button onclick="switchTab('video')" id="videoTabBtn" class="flex-1 py-2.5 rounded-xl text-sm font-semibold transition flex items-center justify-center space-x-2 tab-active cursor-pointer">
+                    <i class="fa-solid fa-video"></i>
+                    <span>Видео / MP3</span>
+                </button>
+                <button onclick="switchTab('photo')" id="photoTabBtn" class="flex-1 py-2.5 rounded-xl text-sm font-semibold transition flex items-center justify-center space-x-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white cursor-pointer">
+                    <i class="fa-solid fa-images"></i>
+                    <span>Фото / Карусель</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Форма ввода -->
+        <div class="bg-white dark:bg-[#1b1e2b] p-3 sm:p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xl dark:shadow-2xl mb-8 transition-colors duration-300">
+            <div class="flex flex-col sm:flex-row gap-3">
+                <div class="relative flex-grow">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400">
+                        <i class="fa-solid fa-link"></i>
+                    </span>
+                    <input type="text" id="urlInput" placeholder="Вставьте ссылку на видео TikTok..." 
+                        class="w-full bg-gray-50 dark:bg-[#12131a] border border-gray-200 dark:border-gray-800 rounded-xl py-3.5 pl-11 pr-4 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-[#fe2c55] transition-colors">
+                </div>
+                <button onclick="fetchVideoInfo()" id="pasteBtn" class="glow-btn text-white font-semibold px-6 py-3.5 rounded-xl text-sm flex items-center justify-center space-x-2 cursor-pointer">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <span>Найти</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Блок загрузки -->
+        <div id="loadingBox" class="hidden bg-white dark:bg-[#1b1e2b] p-6 rounded-2xl border border-gray-200 dark:border-gray-800 text-center mb-8 shadow-sm transition-colors duration-300">
+            <div class="inline-block w-8 h-8 border-4 border-[#fe2c55] border-t-transparent rounded-full animate-spin mb-3"></div>
+            <p id="loadingStatus" class="text-sm text-gray-600 dark:text-gray-300 font-medium">Получаем информацию...</p>
+        </div>
+
+        <!-- Блок превью и действий -->
+        <div id="resultBox" class="hidden bg-white dark:bg-[#1b1e2b] p-6 rounded-2xl border border-gray-200 dark:border-gray-800 mb-8 shadow-xl transition-colors duration-300">
+            <div class="flex flex-col sm:flex-row gap-6 items-center">
+                <img id="videoThumb" src="" alt="Thumbnail" class="w-32 h-44 object-cover rounded-xl border border-gray-200 dark:border-gray-700 shadow-md">
+                
+                <div class="flex-grow w-full">
+                    <div class="flex items-center space-x-2 mb-2">
+                        <span id="badgeText" class="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs px-2.5 py-1 rounded-md font-medium border border-emerald-500/25">Режим: Видео</span>
+                    </div>
+                    <h3 id="videoTitle" class="text-sm font-semibold mb-3 line-clamp-2">Название</h3>
+                    
+                    <!-- Управление для Видео -->
+                    <div id="videoControls">
+                        <div class="mb-4">
+                            <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1.5 font-medium">Разрешение видео:</label>
+                            <select id="qualitySelect" class="w-full bg-gray-50 dark:bg-[#12131a] border border-gray-200 dark:border-gray-700 rounded-xl py-2.5 px-3 text-sm focus:outline-none focus:border-[#fe2c55]">
+                                <option value="1080" selected>Full HD (1080p)</option>
+                                <option value="720">HD (720p)</option>
+                                <option value="480">SD (480p)</option>
+                                <option value="360">360p</option>
+                            </select>
+                        </div>
+                        <div class="space-y-2.5">
+                            <button onclick="downloadFile('video')" class="w-full bg-gradient-to-r from-[#fe2c55] to-[#ff0055] hover:opacity-95 text-white font-medium py-3 px-4 rounded-xl text-sm flex items-center justify-center space-x-2 transition shadow-lg cursor-pointer">
+                                <i class="fa-solid fa-download"></i>
+                                <span>Скачать видео (MP4)</span>
+                            </button>
+                            <button onclick="downloadFile('audio')" class="w-full bg-gray-100 dark:bg-[#252838] hover:bg-gray-200 dark:hover:bg-[#2f3346] text-gray-700 dark:text-gray-200 font-medium py-2.5 px-4 rounded-xl text-sm flex items-center justify-center space-x-2 transition border border-gray-200 dark:border-gray-700 cursor-pointer">
+                                <i class="fa-solid fa-music text-[#25f4ee]"></i>
+                                <span>Скачать аудио (MP3)</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Управление для Фото -->
+                    <div id="photoControls" class="hidden">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Все изображения будут упакованы в удобный архив.</p>
+                        <button onclick="downloadFile('photos')" class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:opacity-95 text-white font-medium py-3 px-4 rounded-xl text-sm flex items-center justify-center space-x-2 transition shadow-lg cursor-pointer">
+                            <i class="fa-solid fa-images"></i>
+                            <span>Скачать все фото (ZIP)</span>
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Ошибка -->
+        <div id="errorBox" class="hidden bg-red-500/10 border border-red-500/30 text-red-500 dark:text-red-400 p-4 rounded-xl text-sm mb-8 text-center"></div>
+
+    </main>
+
+    <!-- Футер -->
+    <footer class="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-[#161823] py-6 text-center text-xs text-gray-500 dark:text-gray-400 transition-colors duration-300">
+        <p>&copy; 2026 TikCloud. Все права защищены.</p>
+    </footer>
+
+    <!-- Логика -->
+    <script>
+        let currentTab = 'video';
+        let currentUrl = '';
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const icon = document.getElementById('themeIcon');
+            
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                icon.className = 'fa-solid fa-sun text-amber-500';
+            } else {
+                html.classList.add('dark');
+                icon.className = 'fa-solid fa-moon text-gray-300';
+            }
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            const videoBtn = document.getElementById('videoTabBtn');
+            const photoBtn = document.getElementById('photoTabBtn');
+            const videoControls = document.getElementById('videoControls');
+            const photoControls = document.getElementById('photoControls');
+            const badgeText = document.getElementById('badgeText');
+            const urlInput = document.getElementById('urlInput');
+
+            document.getElementById('resultBox').classList.add('hidden');
+            document.getElementById('errorBox').classList.add('hidden');
+
+            if (tab === 'video') {
+                videoBtn.className = 'flex-1 py-2.5 rounded-xl text-sm font-semibold transition flex items-center justify-center space-x-2 tab-active cursor-pointer';
+                photoBtn.className = 'flex-1 py-2.5 rounded-xl text-sm font-semibold transition flex items-center justify-center space-x-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white cursor-pointer';
+                videoControls.classList.remove('hidden');
+                photoControls.classList.add('hidden');
+                badgeText.innerText = 'Режим: Видео';
+                urlInput.placeholder = 'Вставьте ссылку на видео TikTok...';
+            } else {
+                photoBtn.className = 'flex-1 py-2.5 rounded-xl text-sm font-semibold transition flex items-center justify-center space-x-2 tab-active cursor-pointer';
+                videoBtn.className = 'flex-1 py-2.5 rounded-xl text-sm font-semibold transition flex items-center justify-center space-x-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white cursor-pointer';
+                photoControls.classList.remove('hidden');
+                videoControls.classList.add('hidden');
+                badgeText.innerText = 'Режим: Фото-карусель';
+                urlInput.placeholder = 'Вставьте ссылку на фото из TikTok...';
+            }
+        }
+
+        async function fetchVideoInfo() {
+            const urlInput = document.getElementById('urlInput').value.trim();
+            const loadingBox = document.getElementById('loadingBox');
+            const resultBox = document.getElementById('resultBox');
+            const errorBox = document.getElementById('errorBox');
+
+            errorBox.classList.add('hidden');
+            resultBox.classList.add('hidden');
+
+            if (!urlInput.includes('tiktok.com')) {
+                errorBox.innerText = 'Пожалуйста, введите корректную ссылку из TikTok';
+                errorBox.classList.remove('hidden');
+                return;
+            }
+
+            currentUrl = urlInput;
+            loadingBox.classList.remove('hidden');
+            document.getElementById('loadingStatus').innerText = 'Получаем информацию...';
+
+            try {
+                const response = await fetch('/get-info', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: urlInput })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Не удалось получить данные');
+                }
+
+                document.getElementById('videoTitle').innerText = data.data.title;
+                if (data.data.thumbnail) {
+                    document.getElementById('videoThumb').src = data.data.thumbnail;
+                }
+
+                loadingBox.classList.add('hidden');
+                resultBox.classList.remove('hidden');
+
+            } catch (err) {
+                loadingBox.classList.add('hidden');
+                errorBox.innerText = err.message;
+                errorBox.classList.remove('hidden');
+            }
+        }
+
+        async function downloadFile(mode) {
+            const loadingBox = document.getElementById('loadingBox');
+            const resultBox = document.getElementById('resultBox');
+            const errorBox = document.getElementById('errorBox');
+            const quality = document.getElementById('qualitySelect').value;
+
+            resultBox.classList.add('hidden');
+            loadingBox.classList.remove('hidden');
+
+            if (currentTab === 'photo' || mode === 'photos') {
+                document.getElementById('loadingStatus').innerText = 'Скачиваем фотографии и пакуем в ZIP...';
+            } else if (mode === 'audio') {
+                document.getElementById('loadingStatus').innerText = 'Конвертируем в MP3...';
+            } else {
+                document.getElementById('loadingStatus').innerText = `Скачиваем видео в ${quality}p...`;
+            }
+
+            try {
+                const response = await fetch('/download-content', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        url: currentUrl, 
+                        tab: currentTab, 
+                        mode: mode, 
+                        quality: quality 
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Ошибка при скачивании');
+                }
+
+                const filename = data.filename;
+                window.location.href = `/get-file/${filename}`;
+                loadingBox.classList.add('hidden');
+                resultBox.classList.remove('hidden');
+
+            } catch (err) {
+                loadingBox.classList.add('hidden');
+                errorBox.innerText = err.message;
+                errorBox.classList.remove('hidden');
+                resultBox.classList.remove('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
