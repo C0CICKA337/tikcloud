@@ -22,10 +22,8 @@ def get_info():
     try:
         ydl_opts = {
             'skip_download': True,
-            'http_headers': {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept-Language': 'en-US,en;q=0.9',
-            }
+            'extractor_args': {'tiktok': {'webpage_download': ['1']}},
+            'socket_timeout': 30,
         }
         with YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
@@ -61,10 +59,7 @@ def download():
     try:
         ydl_opts = {
             'outtmpl': os.path.join(DOWNLOAD_FOLDER, '%(id)s.%(ext)s'),
-            'http_headers': {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept-Language': 'en-US,en;q=0.9',
-            }
+            'extractor_args': {'tiktok': {'webpage_download': ['1']}},
         }
 
         if download_type == 'audio':
