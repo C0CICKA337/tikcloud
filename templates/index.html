@@ -25,15 +25,23 @@
             <div class="flex gap-4 items-center bg-gray-700/50 p-4 rounded-xl">
                 <img id="thumb" class="w-24 h-24 object-cover rounded-lg bg-gray-600" src="" alt="Thumbnail">
                 <div>
-                    <h2 id="videoTitle" class="font-semibold line-clamp-2 text-sm text-gray-200"></h2>
+                    <h2 id="videoTitle" class="font-semibold line-clamp-2 text-sm text-gray-200 mb-2"></h2>
+                    <p id="videoDuration" class="text-xs text-gray-400"></p>
                 </div>
             </div>
 
-            <div class="flex gap-3">
-                <button onclick="downloadMedia('video')" class="flex-1 py-3 bg-pink-600 hover:bg-pink-700 rounded-xl font-semibold text-center transition">
+            <div class="space-y-2">
+                <label class="block text-xs font-medium text-gray-400 uppercase tracking-wider">Выберите качество / тип:</label>
+                <select id="qualitySelect" class="w-full px-4 py-3 bg-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 text-sm">
+                    <!-- Заполняется динамически -->
+                </select>
+            </div>
+
+            <div class="flex gap-3 pt-2">
+                <button onclick="startDownload('video')" class="flex-1 py-3 bg-pink-600 hover:bg-pink-700 rounded-xl font-semibold text-center transition">
                     📹 Скачать видео
                 </button>
-                <button onclick="downloadMedia('audio')" class="flex-1 py-3 bg-gray-700 hover:bg-gray-600 rounded-xl font-semibold text-center transition">
+                <button onclick="startDownload('audio')" class="flex-1 py-3 bg-gray-700 hover:bg-gray-600 rounded-xl font-semibold text-center transition">
                     🎵 Скачать MP3
                 </button>
             </div>
@@ -73,11 +81,65 @@
                 }
 
                 document.getElementById('videoTitle').innerText = data.title || 'Видео TikTok';
-                document.getElementById('thumb').src = data.thumbnail || 'https://via.placeholder.com/150';
+                document.getElementById('thumb').src = data.thumbnail || '';
+                
+                const select = document.getElementById('qualitySelect');
+                select.innerHTML = '';
+                
+                if (data.formats && data.formats.length > 0) {
+                    data.formats.forEach(f => {
+                        const opt = document.createElement('option');
+                        opt.value = f.height;
+                        opt.text = f.label || (f.height === 'best' ? 'Лучшее качество' : `${f.height}p`);
+                        select.appendChild(opt);
+                    });
+                } else {
+                    const opt = document.createElement('option');
+                    opt.value = 'best';
+                    opt.text = 'Лучшее качество';
+                    select.appendChild(opt);
+                }
+
                 resultBox.classList.remove('hidden');
             } catch (err) {
                 errorBox.innerText = err.message || 'Произошла ошибка';
                 errorBox.classList.remove('hidden');
             } finally {
                 searchBtn.disabled = false;
-                search
+                searchBtn.innerText = '🔍 Найти';
+            }
+        }
+
+        async function startDownload(type) {
+            const url = document.getElementById('urlInput').value.trim();
+            const quality = document.getElementById('qualitySelect').value;
+            const errorBox = document.getElementById('errorBox');
+
+            try {
+                const res = await fetch('/download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, quality, type })
+                });
+
+                if (!res.ok) {
+                    const data = await res.json();
+                    throw new Error(data.error || 'Ошибка скачивания');
+                }
+
+                const blob = await res.blob();
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = type === 'audio' ? 'tiktok_audio.mp3' : 'tiktok_video.mp4';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            } catch (err) {
+                errorBox.innerText = err.message;
+                errorBox.classList.remove('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
