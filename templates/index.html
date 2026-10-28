@@ -13,7 +13,7 @@
 </head>
 <body class="bg-gray-100 dark:bg-[#0b0f19] text-gray-900 dark:text-white min-h-screen flex flex-col justify-between selection:bg-pink-500 selection:text-white transition-colors duration-300">
     
-    <!-- Верхняя панель (Хэдер) -->
+    <!-- Верхняя панель -->
     <header class="w-full max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
         <div class="flex items-center gap-3">
             <div class="bg-gradient-to-tr from-pink-500 to-indigo-600 p-2 rounded-xl shadow-lg flex items-center justify-center">
@@ -93,6 +93,8 @@
     </footer>
 
     <script>
+        let cachedMediaData = null;
+
         function toggleTheme() {
             const html = document.documentElement;
             const themeIcon = document.getElementById('themeIcon');
@@ -140,6 +142,7 @@
 
             errorBox.classList.add('hidden');
             resultBox.classList.add('hidden');
+            cachedMediaData = null;
 
             if (!url) {
                 errorBox.innerText = 'Пожалуйста, введите ссылку на TikTok';
@@ -151,23 +154,21 @@
             searchBtn.innerText = 'Поиск...';
 
             try {
-                const res = await fetch('/get-info', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url })
-                });
-
+                // Запрос идет прямо из браузера пользователя к публичному API
+                const res = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(url)}&hd=1`);
                 const data = await res.json();
 
-                if (!res.ok || data.error) {
-                    throw new Error(data.error || 'Не удалось получить данные');
+                if (data.code !== 0) {
+                    throw new Error('Не удалось найти видео. Проверьте правильность ссылки.');
                 }
 
-                document.getElementById('videoTitle').innerText = data.title || 'Видео TikTok';
-                document.getElementById('thumb').src = data.thumbnail || '';
+                cachedMediaData = data.data;
+
+                document.getElementById('videoTitle').innerText = cachedMediaData.title || 'Видео TikTok';
+                document.getElementById('thumb').src = cachedMediaData.cover || '';
                 resultBox.classList.remove('hidden');
             } catch (err) {
-                errorBox.innerText = err.message;
+                errorBox.innerText = err.message || 'Ошибка соединения с API';
                 errorBox.classList.remove('hidden');
             } finally {
                 searchBtn.disabled = false;
@@ -176,28 +177,26 @@
         }
 
         async function downloadMedia(type) {
-            const url = document.getElementById('urlInput').value.trim();
             const errorBox = document.getElementById('errorBox');
             errorBox.classList.add('hidden');
 
-            if (!url) {
-                errorBox.innerText = 'Пожалуйста, введите ссылку';
+            if (!cachedMediaData) {
+                errorBox.innerText = 'Сначала найдите видео';
+                errorBox.classList.remove('hidden');
+                return;
+            }
+
+            const mediaLink = type === 'audio' ? cachedMediaData.music : cachedMediaData.play;
+
+            if (!mediaLink) {
+                errorBox.innerText = 'Ссылка на файл не найдена';
                 errorBox.classList.remove('hidden');
                 return;
             }
 
             try {
-                const res = await fetch('/download', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url, type })
-                });
-
-                if (!res.ok) {
-                    const data = await res.json();
-                    throw new Error(data.error || 'Ошибка скачивания');
-                }
-
+                // Скачиваем файл через Blob прямо в браузере
+                const res = await fetch(mediaLink);
                 const blob = await res.blob();
                 const downloadUrl = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -208,8 +207,8 @@
                 a.remove();
                 window.URL.revokeObjectURL(downloadUrl);
             } catch (err) {
-                errorBox.innerText = err.message;
-                errorBox.classList.remove('hidden');
+                // Если сработал CORS при прямом скачивании файла, открываем ссылку в новой вкладке как запасной вариант
+                window.open(mediaLink, '_blank');
             }
         }
     </script>
