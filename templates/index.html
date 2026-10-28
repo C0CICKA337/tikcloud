@@ -6,140 +6,90 @@
     <title>TikCloud — Скачать видео из TikTok</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center p-4">
-    <div class="max-w-xl w-full bg-gray-800 rounded-2xl shadow-2xl p-6 border border-gray-700">
-        <h1 class="text-3xl font-bold text-center mb-6 text-pink-500">TikCloud</h1>
-        
-        <div class="flex gap-2 mb-4">
-            <input type="text" id="urlInput" placeholder="Вставьте ссылку на TikTok..." 
-                   class="flex-1 px-4 py-3 bg-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 text-sm">
-            <button onclick="fetchInfo()" id="searchBtn" 
-                    class="bg-pink-600 hover:bg-pink-700 px-6 py-3 rounded-xl font-semibold transition flex items-center gap-2">
+<body class="bg-gray-900 text-white min-h-screen flex flex-col items-center justify-between p-4">
+    <div class="w-full max-w-md flex flex-col items-center pt-8">
+        <!-- Логотип -->
+        <div class="flex items-center gap-3 mb-6">
+            <div class="bg-gradient-to-tr from-pink-500 to-indigo-500 p-3 rounded-2xl shadow-lg">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path></svg>
+            </div>
+            <h1 class="text-2xl font-bold tracking-wide">TikCloud</h1>
+        </div>
+
+        <p class="text-xs text-gray-400 text-center mb-6 px-4">Скачивайте видео, аудио и фото из TikTok без водяных знаков.</p>
+
+        <!-- Переключатель вкладок -->
+        <div class="w-full bg-gray-800/80 p-1.5 rounded-2xl flex gap-2 mb-6 border border-gray-700/50">
+            <button id="tabVideo" onclick="switchTab('video')" class="flex-1 py-3 rounded-xl font-medium text-sm transition flex items-center justify-center gap-2 bg-pink-600 text-white shadow-lg">
+                🎥 Видео / MP3
+            </button>
+            <button id="tabPhoto" onclick="switchTab('photo')" class="flex-1 py-3 rounded-xl font-medium text-sm transition flex items-center justify-center gap-2 text-gray-400 hover:text-white">
+                🖼️ Фото / Карусель
+            </button>
+        </div>
+
+        <!-- Поле ввода -->
+        <div class="w-full bg-gray-800 rounded-2xl shadow-xl p-4 border border-gray-700 space-y-4">
+            <div class="relative flex items-center">
+                <span class="absolute left-4 text-gray-400">🔗</span>
+                <input type="text" id="urlInput" placeholder="https://vt.tiktok.com/..." 
+                       class="w-full pl-11 pr-4 py-3.5 bg-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 text-sm border border-gray-700 text-gray-200">
+            </div>
+            <button onclick="fetchData()" id="searchBtn" 
+                    class="w-full bg-pink-600 hover:bg-pink-700 py-3.5 rounded-xl font-semibold transition flex items-center justify-center gap-2 shadow-lg shadow-pink-600/20">
                 🔍 Найти
             </button>
         </div>
 
-        <div id="errorBox" class="hidden p-4 mb-4 bg-red-900/50 border border-red-500 rounded-xl text-red-200 text-sm"></div>
+        <!-- Ошибка -->
+        <div id="errorBox" class="hidden w-full mt-4 p-4 bg-red-950/80 border border-red-500/50 rounded-xl text-red-200 text-xs leading-relaxed"></div>
 
-        <div id="resultBox" class="hidden space-y-4 mt-6">
-            <div class="flex gap-4 items-center bg-gray-700/50 p-4 rounded-xl">
-                <img id="thumb" class="w-24 h-24 object-cover rounded-lg bg-gray-600" src="" alt="Thumbnail">
-                <div>
-                    <h2 id="videoTitle" class="font-semibold line-clamp-2 text-sm text-gray-200 mb-2"></h2>
-                    <p id="videoDuration" class="text-xs text-gray-400"></p>
+        <!-- Результат -->
+        <div id="resultBox" class="hidden w-full bg-gray-800 rounded-2xl shadow-xl p-4 border border-gray-700 mt-4 space-y-4">
+            <div class="flex gap-4 items-center bg-gray-900/60 p-3 rounded-xl border border-gray-700/50">
+                <img id="thumb" class="w-20 h-20 object-cover rounded-lg bg-gray-700" src="" alt="Thumbnail">
+                <div class="flex-1 min-w-0">
+                    <h2 id="videoTitle" class="font-medium text-xs text-gray-200 line-clamp-2"></h2>
                 </div>
             </div>
 
-            <div class="space-y-2">
-                <label class="block text-xs font-medium text-gray-400 uppercase tracking-wider">Выберите качество / тип:</label>
-                <select id="qualitySelect" class="w-full px-4 py-3 bg-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 text-sm">
-                    <!-- Заполняется динамически -->
-                </select>
-            </div>
-
-            <div class="flex gap-3 pt-2">
-                <button onclick="startDownload('video')" class="flex-1 py-3 bg-pink-600 hover:bg-pink-700 rounded-xl font-semibold text-center transition">
+            <div id="videoActions" class="flex gap-2">
+                <button onclick="downloadMedia('video')" class="flex-1 py-3 bg-pink-600 hover:bg-pink-700 rounded-xl font-semibold text-xs text-center transition shadow-md">
                     📹 Скачать видео
                 </button>
-                <button onclick="startDownload('audio')" class="flex-1 py-3 bg-gray-700 hover:bg-gray-600 rounded-xl font-semibold text-center transition">
+                <button onclick="downloadMedia('audio')" class="flex-1 py-3 bg-gray-700 hover:bg-gray-600 rounded-xl font-semibold text-xs text-center transition border border-gray-600">
                     🎵 Скачать MP3
                 </button>
             </div>
         </div>
     </div>
 
+    <!-- Копирайт -->
+    <footer class="text-xs text-gray-500 py-6">
+        © 2026 TikCloud. Все права защищены.
+    </footer>
+
     <script>
-        async function fetchInfo() {
+        let currentMode = 'video';
+
+        function switchTab(mode) {
+            currentMode = mode;
+            const tabVideo = document.getElementById('tabVideo');
+            const tabPhoto = document.getElementById('tabPhoto');
+
+            if (mode === 'video') {
+                tabVideo.className = "flex-1 py-3 rounded-xl font-medium text-sm transition flex items-center justify-center gap-2 bg-pink-600 text-white shadow-lg";
+                tabPhoto.className = "flex-1 py-3 rounded-xl font-medium text-sm transition flex items-center justify-center gap-2 text-gray-400 hover:text-white";
+            } else {
+                tabPhoto.className = "flex-1 py-3 rounded-xl font-medium text-sm transition flex items-center justify-center gap-2 bg-pink-600 text-white shadow-lg";
+                tabVideo.className = "flex-1 py-3 rounded-xl font-medium text-sm transition flex items-center justify-center gap-2 text-gray-400 hover:text-white";
+            }
+        }
+
+        async function fetchData() {
             const url = document.getElementById('urlInput').value.trim();
             const errorBox = document.getElementById('errorBox');
             const resultBox = document.getElementById('resultBox');
             const searchBtn = document.getElementById('searchBtn');
 
-            errorBox.classList.add('hidden');
-            resultBox.classList.add('hidden');
-
-            if (!url) {
-                errorBox.innerText = 'Пожалуйста, введите ссылку';
-                errorBox.classList.remove('hidden');
-                return;
-            }
-
-            searchBtn.disabled = true;
-            searchBtn.innerText = 'Загрузка...';
-
-            try {
-                const res = await fetch('/get-info', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url })
-                });
-
-                const data = await res.json();
-
-                if (!res.ok || data.error) {
-                    throw new Error(data.error || 'Ошибка загрузки данных');
-                }
-
-                document.getElementById('videoTitle').innerText = data.title || 'Видео TikTok';
-                document.getElementById('thumb').src = data.thumbnail || '';
-                
-                const select = document.getElementById('qualitySelect');
-                select.innerHTML = '';
-                
-                if (data.formats && data.formats.length > 0) {
-                    data.formats.forEach(f => {
-                        const opt = document.createElement('option');
-                        opt.value = f.height;
-                        opt.text = f.label || (f.height === 'best' ? 'Лучшее качество' : `${f.height}p`);
-                        select.appendChild(opt);
-                    });
-                } else {
-                    const opt = document.createElement('option');
-                    opt.value = 'best';
-                    opt.text = 'Лучшее качество';
-                    select.appendChild(opt);
-                }
-
-                resultBox.classList.remove('hidden');
-            } catch (err) {
-                errorBox.innerText = err.message || 'Произошла ошибка';
-                errorBox.classList.remove('hidden');
-            } finally {
-                searchBtn.disabled = false;
-                searchBtn.innerText = '🔍 Найти';
-            }
-        }
-
-        async function startDownload(type) {
-            const url = document.getElementById('urlInput').value.trim();
-            const quality = document.getElementById('qualitySelect').value;
-            const errorBox = document.getElementById('errorBox');
-
-            try {
-                const res = await fetch('/download', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url, quality, type })
-                });
-
-                if (!res.ok) {
-                    const data = await res.json();
-                    throw new Error(data.error || 'Ошибка скачивания');
-                }
-
-                const blob = await res.blob();
-                const downloadUrl = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = downloadUrl;
-                a.download = type === 'audio' ? 'tiktok_audio.mp3' : 'tiktok_video.mp4';
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-            } catch (err) {
-                errorBox.innerText = err.message;
-                errorBox.classList.remove('hidden');
-            }
-        }
-    </script>
-</body>
-</html>
+            errorBox.

@@ -4,6 +4,10 @@ from flask import Flask, render_template, request, send_file, jsonify
 
 app = Flask(__name__)
 
+DOWNLOAD_FOLDER = 'downloads'
+if not os.path.exists(DOWNLOAD_FOLDER):
+    os.makedirs(DOWNLOAD_FOLDER)
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -27,14 +31,12 @@ def get_info():
                 'thumbnail': info.get('cover', ''),
                 'duration': info.get('duration', 0),
                 'formats': [
-                    {'height': 'best', 'label': 'Лучшее качество (HD)'},
-                    {'height': 'watermark', 'label': 'С водяным знаком'}
+                    {'height': 'best', 'label': 'Лучшее качество (HD)'}
                 ]
             })
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"Error in get_info: {e}")
 
-    # Безопасный фоллбек, чтобы интерфейс всегда открывал кнопки
     return jsonify({
         'title': 'Видео TikTok',
         'thumbnail': '',
@@ -53,31 +55,26 @@ def download():
 
     try:
         api_url = f"https://tikwm.com/api/?url={url}"
-        response = requests.get(api_url, timeout=10)
+        response = requests.get(api_url, timeout=15)
         res_data = response.json()
 
         if res_data.get('code') == 0:
             info = res_data.get('data', {})
-            
-            if download_type == 'audio':
-                media_link = info.get('music')
-            else:
-                media_link = info.get('play') # Ссылка на видео без водяного знака
+            media_link = info.get('music') if download_type == 'audio' else info.get('play')
 
             if media_link:
-                # Скачиваем файл во временную памету и отдаем клиенту
-                file_res = requests.get(media_link, stream=True, timeout=15)
+                file_res = requests.get(media_link, stream=True, timeout=20)
                 ext = 'mp3' if download_type == 'audio' else 'mp4'
-                temp_filename = f"tiktok_download.{ext}"
+                temp_filename = os.path.join(DOWNLOAD_FOLDER, f"temp_{os.getpid()}.{ext}")
                 
                 with open(temp_filename, 'wb') as f:
                     for chunk in file_res.iter_content(chunk_size=8192):
                         f.write(chunk)
                 
-                response = send_file(temp_filename, as_attachment=True)
+                response = send_file(temp_filename, as_attachment=True, download_name=f"tiktok.{ext}")
                 return response
 
-        return jsonify({'error': 'Не удалось получить файл от TikTok'}), 400
+        return jsonify({'error': 'Не удалось получить ссылку на файл от API'}), 400
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
