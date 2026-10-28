@@ -76,7 +76,7 @@
                 </div>
             </div>
 
-            <!-- Выбор качества видео и кнопка скачивания -->
+            <!-- Полный выбор разрешений и кнопка -->
             <div class="flex gap-2 items-center">
                 <select id="resolutionSelect" class="flex-1 bg-gray-50 dark:bg-[#0d111a] border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-200 text-xs rounded-xl px-3 py-3.5 focus:outline-none focus:ring-2 focus:ring-pink-500">
                     <option value="4k">🌟 Видео 4K (Ultra HD)</option>
@@ -167,6 +167,7 @@
             searchBtn.innerText = 'Поиск...';
 
             try {
+                // Запрашиваем с параметром hd=1 для получения максимального качества
                 const res = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(url)}&hd=1`);
                 const data = await res.json();
 
@@ -199,10 +200,15 @@
             }
 
             const resolution = document.getElementById('resolutionSelect').value;
-            // Высокие разрешения направляем на HD-поток, низкие — на стандартный (SD)
-            let mediaLink = (['4k', '2k', '1080', '720'].includes(resolution)) 
-                ? (cachedMediaData.hdplay || cachedMediaData.play) 
-                : cachedMediaData.play;
+            
+            // Распределяем потоки в зависимости от выбранного качества в списке
+            let mediaLink = cachedMediaData.play;
+            if (['4k', '2k', '1080', '720'].includes(resolution)) {
+                mediaLink = cachedMediaData.hdplay || cachedMediaData.play;
+            } else {
+                // Для низких разрешений берем стандартный поток, который весит меньше
+                mediaLink = cachedMediaData.play;
+            }
 
             if (!mediaLink) {
                 mediaLink = cachedMediaData.play;
