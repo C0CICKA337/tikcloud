@@ -41,21 +41,11 @@
             Скачивайте видео, MP3 и фото-карусели из TikTok без водяных знаков.
         </p>
 
-        <!-- Переключатель вкладок -->
-        <div class="bg-white dark:bg-[#131824] p-1.5 rounded-2xl flex gap-2 mb-6 border border-gray-300 dark:border-gray-800/80 shadow-md w-full max-w-md transition-colors duration-300">
-            <button id="tabVideo" onclick="switchTab('video')" class="flex-1 py-3 rounded-xl font-medium text-sm transition flex items-center justify-center gap-2 bg-pink-600 text-white shadow-lg shadow-pink-600/25">
-                <span>🎥</span> Видео / MP3
-            </button>
-            <button id="tabPhoto" onclick="switchTab('photo')" class="flex-1 py-3 rounded-xl font-medium text-sm transition flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
-                <span>🖼️</span> Фото / Карусель
-            </button>
-        </div>
-
         <!-- Поле ввода ссылки -->
         <div class="w-full bg-white dark:bg-[#131824] rounded-2xl shadow-xl p-3 border border-gray-300 dark:border-gray-800 flex items-center gap-2 transition-colors duration-300">
             <div class="relative flex-1 flex items-center">
                 <span class="absolute left-4 text-gray-400 dark:text-gray-500">🔗</span>
-                <input type="text" id="urlInput" placeholder="Вставьте ссылку на видео TikTok..." 
+                <input type="text" id="urlInput" placeholder="Вставьте ссылку на видео или фото-карусель..." 
                        class="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-[#0d111a] rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 text-sm border border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 transition-colors duration-300">
             </div>
             <button onclick="fetchData()" id="searchBtn" 
@@ -67,23 +57,35 @@
         <!-- Блок ошибок -->
         <div id="errorBox" class="hidden w-full mt-4 p-4 bg-red-100 dark:bg-red-950/80 border border-red-400 dark:border-red-500/50 rounded-xl text-red-700 dark:text-red-200 text-xs"></div>
 
-        <!-- Блок результата -->
-        <div id="resultBox" class="hidden w-full bg-white dark:bg-[#131824] rounded-2xl shadow-xl p-4 border border-gray-300 dark:border-gray-800 mt-4 space-y-4 transition-colors duration-300">
+        <!-- Блок результата для видео/аудио -->
+        <div id="resultBoxVideo" class="hidden w-full bg-white dark:bg-[#131824] rounded-2xl shadow-xl p-4 border border-gray-300 dark:border-gray-800 mt-4 space-y-4 transition-colors duration-300">
             <div class="flex gap-4 items-center bg-gray-50 dark:bg-[#0d111a] p-3 rounded-xl border border-gray-200 dark:border-gray-800">
-                <img id="thumb" class="w-20 h-20 object-cover rounded-lg bg-gray-200 dark:bg-gray-800" src="" alt="Thumbnail">
+                <img id="thumbVideo" class="w-20 h-20 object-cover rounded-lg bg-gray-200 dark:bg-gray-800" src="" alt="Thumbnail">
                 <div class="flex-1 min-w-0">
                     <h2 id="videoTitle" class="font-medium text-xs text-gray-800 dark:text-gray-200 line-clamp-2"></h2>
                 </div>
             </div>
 
-            <!-- Кнопка скачивания видео (единая) -->
             <button onclick="downloadMedia('video')" class="w-full py-3.5 bg-pink-600 hover:bg-pink-700 rounded-xl font-semibold text-xs text-center transition shadow-md text-white flex items-center justify-center gap-2">
                 📥 Скачать видео без водяного знака
             </button>
 
-            <!-- Отдельная кнопка для MP3 -->
             <button onclick="downloadMedia('audio')" class="w-full py-3 bg-gray-200 dark:bg-[#1c2333] hover:bg-gray-300 dark:hover:bg-[#252f45] text-gray-800 dark:text-white rounded-xl font-semibold text-xs text-center transition border border-gray-300 dark:border-gray-700 flex items-center justify-center gap-2">
                 🎵 Скачать аудио (MP3)
+            </button>
+        </div>
+
+        <!-- Блок результата для фото-карусели -->
+        <div id="resultBoxPhotos" class="hidden w-full bg-white dark:bg-[#131824] rounded-2xl shadow-xl p-4 border border-gray-300 dark:border-gray-800 mt-4 space-y-4 transition-colors duration-300">
+            <h2 class="font-semibold text-sm text-gray-800 dark:text-gray-200 text-center">🖼️ Выберите фотографии для скачивания:</h2>
+            
+            <!-- Сетка фоток -->
+            <div id="photosGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-72 overflow-y-auto p-1">
+                <!-- Сюда динамически добавятся картинки с чекбоксами -->
+            </div>
+
+            <button onclick="downloadSelectedPhotos()" class="w-full py-3.5 bg-pink-600 hover:bg-pink-700 rounded-xl font-semibold text-xs text-center transition shadow-md text-white flex items-center justify-center gap-2">
+                📥 Скачать выбранные фото
             </button>
         </div>
     </main>
@@ -119,30 +121,16 @@
             }
         });
 
-        function switchTab(mode) {
-            const tabVideo = document.getElementById('tabVideo');
-            const tabPhoto = document.getElementById('tabPhoto');
-            const urlInput = document.getElementById('urlInput');
-
-            if (mode === 'video') {
-                tabVideo.className = "flex-1 py-3 rounded-xl font-medium text-sm transition flex items-center justify-center gap-2 bg-pink-600 text-white shadow-lg shadow-pink-600/25";
-                tabPhoto.className = "flex-1 py-3 rounded-xl font-medium text-sm transition flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white";
-                urlInput.placeholder = "Вставьте ссылку на видео TikTok...";
-            } else {
-                tabPhoto.className = "flex-1 py-3 rounded-xl font-medium text-sm transition flex items-center justify-center gap-2 bg-pink-600 text-white shadow-lg shadow-pink-600/25";
-                tabVideo.className = "flex-1 py-3 rounded-xl font-medium text-sm transition flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white";
-                urlInput.placeholder = "Вставьте ссылку на фото-карусель TikTok...";
-            }
-        }
-
         async function fetchData() {
             const url = document.getElementById('urlInput').value.trim();
             const errorBox = document.getElementById('errorBox');
-            const resultBox = document.getElementById('resultBox');
+            const resultBoxVideo = document.getElementById('resultBoxVideo');
+            const resultBoxPhotos = document.getElementById('resultBoxPhotos');
             const searchBtn = document.getElementById('searchBtn');
 
             errorBox.classList.add('hidden');
-            resultBox.classList.add('hidden');
+            resultBoxVideo.classList.add('hidden');
+            resultBoxPhotos.classList.add('hidden');
             cachedMediaData = null;
 
             if (!url) {
@@ -159,14 +147,33 @@
                 const data = await res.json();
 
                 if (data.code !== 0) {
-                    throw new Error('Не удалось найти видео. Проверьте правильность ссылки.');
+                    throw new Error('Не удалось найти медиа. Проверьте правильность ссылки.');
                 }
 
                 cachedMediaData = data.data;
 
-                document.getElementById('videoTitle').innerText = cachedMediaData.title || 'Видео TikTok';
-                document.getElementById('thumb').src = cachedMediaData.cover || '';
-                resultBox.classList.remove('hidden');
+                // Проверяем, карусель это или обычное видео
+                if (cachedMediaData.images && cachedMediaData.images.length > 0) {
+                    // Рендерим фото-карусель
+                    const grid = document.getElementById('photosGrid');
+                    grid.innerHTML = '';
+                    
+                    cachedMediaData.images.forEach((imgUrl, index) => {
+                        grid.innerHTML += `
+                            <label class="relative group cursor-pointer block rounded-xl overflow-hidden border-2 border-transparent hover:border-pink-500 transition">
+                                <input type="checkbox" name="photoCheck" value="${imgUrl}" checked class="absolute top-2 left-2 z-10 w-4 h-4 accent-pink-600 rounded">
+                                <img src="${imgUrl}" class="w-full h-28 object-cover bg-gray-200 dark:bg-gray-800 group-hover:scale-105 transition duration-300">
+                                <div class="absolute bottom-1 right-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded">#${index + 1}</div>
+                            </label>
+                        `;
+                    });
+                    resultBoxPhotos.classList.remove('hidden');
+                } else {
+                    // Обычное видео
+                    document.getElementById('videoTitle').innerText = cachedMediaData.title || 'Видео TikTok';
+                    document.getElementById('thumbVideo').src = cachedMediaData.cover || '';
+                    resultBoxVideo.classList.remove('hidden');
+                }
             } catch (err) {
                 errorBox.innerText = err.message || 'Ошибка соединения с API';
                 errorBox.classList.remove('hidden');
@@ -180,22 +187,16 @@
             const errorBox = document.getElementById('errorBox');
             errorBox.classList.add('hidden');
 
-            if (!cachedMediaData) {
-                errorBox.innerText = 'Сначала найдите видео';
-                errorBox.classList.remove('hidden');
-                return;
-            }
+            if (!cachedMediaData) return;
 
             const mediaLink = type === 'audio' ? cachedMediaData.music : (cachedMediaData.hdplay || cachedMediaData.play);
-
             if (!mediaLink) {
                 errorBox.innerText = 'Ссылка на файл не найдена';
                 errorBox.classList.remove('hidden');
                 return;
             }
 
-            // Генерируем уникальный случайный суффикс (от 1000 до 9999) для имени файла
-            const randomId = Math.floor(1 + Math.random() * 9000);
+            const randomId = Math.floor(1000 + Math.random() * 9000);
             const ext = type === 'audio' ? 'mp3' : 'mp4';
             const fileName = `clip_TikCloud_${randomId}.${ext}`;
 
@@ -212,6 +213,42 @@
                 window.URL.revokeObjectURL(downloadUrl);
             } catch (err) {
                 window.open(mediaLink, '_blank');
+            }
+        }
+
+        async function downloadSelectedPhotos() {
+            const errorBox = document.getElementById('errorBox');
+            errorBox.classList.add('hidden');
+
+            const checkboxes = document.querySelectorAll('input[name="photoCheck"]:checked');
+            if (checkboxes.length === 0) {
+                errorBox.innerText = 'Выберите хотя бы одну фотографию';
+                errorBox.classList.remove('hidden');
+                return;
+            }
+
+            // Скачиваем каждую выбранную фотографию с уникальным суффиксом
+            for (let checkbox of checkboxes) {
+                const imgUrl = checkbox.value;
+                const randomId = Math.floor(1000 + Math.random() * 9000);
+                const fileName = `clip_TikCloud_photo_${randomId}.jpg`;
+
+                try {
+                    const res = await fetch(imgUrl);
+                    const blob = await res.blob();
+                    const downloadUrl = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = downloadUrl;
+                    a.download = fileName;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(downloadUrl);
+                    // Небольшая задержка между скачиваниями, чтобы браузер не заблокировал пачку файлов
+                    await new Promise(r => setTimeout(r, 400));
+                } catch (err) {
+                    window.open(imgUrl, '_blank');
+                }
             }
         }
     </script>
