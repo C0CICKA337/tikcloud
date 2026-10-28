@@ -1,5 +1,4 @@
 import os
-import zipfile
 from flask import Flask, render_template, request, send_file, jsonify
 from yt_dlp import YoutubeDL
 
@@ -12,6 +11,35 @@ if not os.path.exists(DOWNLOAD_FOLDER):
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/get-info', methods=['POST'])
+def get_info():
+    data = request.json
+    url = data.get('url')
+    if not url:
+        return jsonify({'error': 'Не указана ссылка'}), 400
+
+    try:
+        ydl_opts = {'skip_download': True}
+        with YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            
+            # Извлекаем доступные форматы или базовую информацию для интерфейса
+            formats = []
+            for f in info.get('formats', []):
+                height = f.get('height')
+                if height and height not in [x['height'] for x in formats]:
+                    formats.append({'height': height})
+
+            response_data = {
+                'title': info.get('title', 'Видео TikTok'),
+                'thumbnail': info.get('thumbnail'),
+                'duration': info.get('duration'),
+                'formats': sorted(formats, key=lambda x: x['height'], reverse=True)
+            }
+        return jsonify(response_data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/download', methods=['POST'])
 def download():
