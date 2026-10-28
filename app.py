@@ -8,9 +8,11 @@ DOWNLOAD_FOLDER = 'downloads'
 if not os.path.exists(DOWNLOAD_FOLDER):
     os.makedirs(DOWNLOAD_FOLDER)
 
-# Заголовки, чтобы API думало, что запрос идет от браузера
+# Заголовки для имитации реального браузера (чтобы Render не получал 403 от API)
 HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+    'Referer': 'https://tikwm.com/',
+    'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7'
 }
 
 @app.route('/')
@@ -25,11 +27,11 @@ def get_info():
         return jsonify({'error': 'Не указана ссылка'}), 400
 
     try:
-        api_url = f"https://tikwm.com/api/?url={url}"
-        response = requests.get(api_url, headers=HEADERS, timeout=10)
+        api_url = f"https://tikwm.com/api/?url={url}&hd=1"
+        response = requests.get(api_url, headers=HEADERS, timeout=15)
         
         if response.status_code != 200:
-            return jsonify({'error': f'Внешнее API вернуло статус {response.status_code}'}), 400
+            return jsonify({'error': f'Ошибка API (код {response.status_code})'}), 400
 
         res_data = response.json()
 
@@ -41,11 +43,11 @@ def get_info():
                 'duration': info.get('duration', 0)
             })
         else:
-            return jsonify({'error': 'Не удалось найти видео по этой ссылке. Проверьте правильность URL.'}), 400
+            return jsonify({'error': 'Не удалось найти видео. Проверьте правильность ссылки.'}), 400
 
     except Exception as e:
         print(f"Error in get_info: {e}")
-        return jsonify({'error': f'Ошибка сервера: {str(e)}'}), 500
+        return jsonify({'error': f'Ошибка: {str(e)}'}), 500
 
 @app.route('/download', methods=['POST'])
 def download():
@@ -57,7 +59,7 @@ def download():
         return jsonify({'error': 'Не указана ссылка'}), 400
 
     try:
-        api_url = f"https://tikwm.com/api/?url={url}"
+        api_url = f"https://tikwm.com/api/?url={url}&hd=1"
         response = requests.get(api_url, headers=HEADERS, timeout=15)
         res_data = response.json()
 
@@ -76,7 +78,7 @@ def download():
                 
                 return send_file(temp_filename, as_attachment=True, download_name=f"tiktok.{ext}")
 
-        return jsonify({'error': 'Ссылка на медиафайл не найдена'}), 400
+        return jsonify({'error': 'Ссылка на файл не найдена'}), 400
 
     except Exception as e:
         print(f"Error in download: {e}")
