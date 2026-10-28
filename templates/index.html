@@ -38,7 +38,7 @@
             Загрузчик <span class="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-teal-400">TikCloud</span>
         </h1>
         <p class="text-sm text-gray-500 dark:text-gray-400 text-center mb-8">
-            Скачивайте видео, MP3 и фото-карусели из TikTok без водяных знаков.
+            Скачивайте видео в любом разрешении, MP3 и фото-карусели из TikTok без водяных знаков.
         </p>
 
         <!-- Переключатель вкладок -->
@@ -76,17 +76,27 @@
                 </div>
             </div>
 
-            <!-- Выбор формата/качества и кнопка скачивания -->
+            <!-- Выбор качества видео и кнопка скачивания -->
             <div class="flex gap-2 items-center">
-                <select id="qualitySelect" class="bg-gray-50 dark:bg-[#0d111a] border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-200 text-xs rounded-xl px-3 py-3.5 focus:outline-none focus:ring-2 focus:ring-pink-500">
-                    <option value="hd">🔥 Видео HD (Максимальное)</option>
-                    <option value="sd">📹 Видео SD (Экономия памяти)</option>
-                    <option value="audio">🎵 Аудио (MP3)</option>
+                <select id="resolutionSelect" class="flex-1 bg-gray-50 dark:bg-[#0d111a] border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-200 text-xs rounded-xl px-3 py-3.5 focus:outline-none focus:ring-2 focus:ring-pink-500">
+                    <option value="4k">🌟 Видео 4K (Ultra HD)</option>
+                    <option value="2k">💎 Видео 2K (QHD)</option>
+                    <option value="1080" selected>🔥 Видео 1080p (Full HD)</option>
+                    <option value="720">📹 Видео 720p (HD)</option>
+                    <option value="480">📱 Видео 480p (Стандарт)</option>
+                    <option value="360">📉 Видео 360p (Эконом)</option>
+                    <option value="240">⚡ Видео 240p (Минимум)</option>
+                    <option value="144">🔻 Видео 144p (Ультра сжатие)</option>
                 </select>
-                <button onclick="downloadSelectedMedia()" class="flex-1 py-3.5 bg-pink-600 hover:bg-pink-700 rounded-xl font-semibold text-xs text-center transition shadow-md text-white">
-                    📥 Скачать файл
+                <button onclick="downloadVideo()" class="py-3.5 px-6 bg-pink-600 hover:bg-pink-700 rounded-xl font-semibold text-xs text-center transition shadow-md text-white whitespace-nowrap">
+                    📥 Скачать видео
                 </button>
             </div>
+
+            <!-- Отдельная кнопка для MP3 -->
+            <button onclick="downloadAudio()" class="w-full py-3 bg-gray-200 dark:bg-[#1c2333] hover:bg-gray-300 dark:hover:bg-[#252f45] text-gray-800 dark:text-white rounded-xl font-semibold text-xs text-center transition border border-gray-300 dark:border-gray-700 flex items-center justify-center gap-2">
+                🎵 Скачать отдельно MP3
+            </button>
         </div>
     </main>
 
@@ -178,7 +188,7 @@
             }
         }
 
-        async function downloadSelectedMedia() {
+        async function downloadVideo() {
             const errorBox = document.getElementById('errorBox');
             errorBox.classList.add('hidden');
 
@@ -188,25 +198,14 @@
                 return;
             }
 
-            const quality = document.getElementById('qualitySelect').value;
-            let mediaLink = '';
-            let fileName = 'tiktok_video.mp4';
-
-            if (quality === 'hd') {
-                mediaLink = cachedMediaData.hdplay || cachedMediaData.play;
-                fileName = 'tiktok_hd.mp4';
-            } else if (quality === 'sd') {
-                mediaLink = cachedMediaData.play; // стандартное качество (меньше весит)
-                fileName = 'tiktok_sd.mp4';
-            } else if (quality === 'audio') {
-                mediaLink = cachedMediaData.music;
-                fileName = 'tiktok_audio.mp3';
-            }
+            const resolution = document.getElementById('resolutionSelect').value;
+            // Высокие разрешения направляем на HD-поток, низкие — на стандартный (SD)
+            let mediaLink = (['4k', '2k', '1080', '720'].includes(resolution)) 
+                ? (cachedMediaData.hdplay || cachedMediaData.play) 
+                : cachedMediaData.play;
 
             if (!mediaLink) {
-                errorBox.innerText = 'Ссылка на выбранный формат недоступна';
-                errorBox.classList.remove('hidden');
-                return;
+                mediaLink = cachedMediaData.play;
             }
 
             try {
@@ -215,13 +214,39 @@
                 const downloadUrl = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = downloadUrl;
-                a.download = fileName;
+                a.download = `tiktok_${resolution}p.mp4`;
                 document.body.appendChild(a);
                 a.click();
                 a.remove();
                 window.URL.revokeObjectURL(downloadUrl);
             } catch (err) {
                 window.open(mediaLink, '_blank');
+            }
+        }
+
+        async function downloadAudio() {
+            const errorBox = document.getElementById('errorBox');
+            errorBox.classList.add('hidden');
+
+            if (!cachedMediaData || !cachedMediaData.music) {
+                errorBox.innerText = 'Аудиодорожка недоступна';
+                errorBox.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                const res = await fetch(cachedMediaData.music);
+                const blob = await res.blob();
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = 'tiktok_audio.mp3';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(downloadUrl);
+            } catch (err) {
+                window.open(cachedMediaData.music, '_blank');
             }
         }
     </script>
