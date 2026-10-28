@@ -1,12 +1,8 @@
 import os
-from flask import Flask, render_template, request, send_file, jsonify
-from yt_dlp import YoutubeDL
+import requests
+from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
-
-DOWNLOAD_FOLDER = 'downloads'
-if not os.path.exists(DOWNLOAD_FOLDER):
-    os.makedirs(DOWNLOAD_FOLDER)
 
 @app.route('/')
 def index():
@@ -19,7 +15,24 @@ def get_info():
     if not url:
         return jsonify({'error': 'Не указана ссылка'}), 400
 
-    # Всегда отдаем базовую информацию, чтобы интерфейс не ломался от блокировок TikTok
+    try:
+        # Используем быстрое публичное API для получения прямой информации о видео TikTok
+        api_url = f"https://tikwm.com/api/?url={url}"
+        response = requests.get(api_url, timeout=10)
+        res_data = response.json()
+
+        if res_data.get('code') == 0:
+            info = res_data.get('data', {})
+            return jsonify({
+                'title': info.get('title', 'Видео TikTok'),
+                'thumbnail': info.get('cover', ''),
+                'duration': info.get('duration', 0),
+                'formats': [{'height': 720}, {'height': 480}, {'height': 360}]
+            })
+    except Exception:
+        pass
+
+    # Заглушка на случай сбоя сети, чтобы интерфейс не ломался
     return jsonify({
         'title': 'Видео TikTok',
         'thumbnail': '',
@@ -31,40 +44,30 @@ def get_info():
 def download():
     data = request.json
     url = data.get('url')
-    quality = data.get('quality', 'best')
     download_type = data.get('type', 'video')
 
     if not url:
         return jsonify({'error': 'Не указана ссылка'}), 400
 
     try:
-        ydl_opts = {
-            'outtmpl': os.path.join(DOWNLOAD_FOLDER, '%(id)s.%(ext)s'),
-        }
+        # Получаем прямую ссылку на медиафайл через надежный API-парсер
+        api_url = f"https://tikwm.com/api/?url={url}"
+        response = requests.get(api_url, timeout=10)
+        res_data = response.json()
 
-        if download_type == 'audio':
-            ydl_opts.update({
-                'format': 'bestaudio/best',
-                'postprocessors': [{
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': 'mp3',
-                    'preferredquality': '192',
-                }],
-            })
-        elif download_type == 'video':
-            if quality == 'best':
-                ydl_opts['format'] = 'bestvideo+bestaudio/best'
-            else:
-                ydl_opts['format'] = f'bestvideo[height<={quality}]+bestaudio/best[height<={quality}]/best'
-        
-        with YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            filename = ydl.prepare_filename(info)
+        if res_data.get('code') == 0:
+            info = res_data.get('data', {})
             
             if download_type == 'audio':
-                filename = os.path.splitext(filename)[0] + '.mp3'
+                media_link = info.get('music') # Ссылка на аудио
+            else:
+                media_link = info.get('play') # Ссылка на видео без водяных знаков
 
-        return send_file(filename, as_attachment=True)
+            if media_link:
+                # Перенаправляем пользователя на прямую загрузку файла
+                return jsonify({'redirect_url': media_link})
+
+        return jsonify({'error': 'Не удалось получить ссылку на скачивание от TikTok'}), 500
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
