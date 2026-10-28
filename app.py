@@ -11,7 +11,7 @@ if not os.path.exists(DOWNLOAD_FOLDER):
     os.makedirs(DOWNLOAD_FOLDER)
 
 @app.route('/')
-ddef index():
+def index():
     return render_template('index.html')
 
 @app.route('/download', methods=['POST'])
