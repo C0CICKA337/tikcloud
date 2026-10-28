@@ -38,7 +38,7 @@
             Загрузчик <span class="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-teal-400">TikCloud</span>
         </h1>
         <p class="text-sm text-gray-500 dark:text-gray-400 text-center mb-8">
-            Скачивайте видео (HD/SD), MP3 и фото-карусели из TikTok без водяных знаков.
+            Скачивайте видео, MP3 и фото-карусели из TikTok без водяных знаков.
         </p>
 
         <!-- Переключатель вкладок -->
@@ -76,16 +76,15 @@
                 </div>
             </div>
 
-            <!-- Кнопки выбора качества и аудио -->
-            <div class="grid grid-cols-3 gap-2">
-                <button onclick="downloadMedia('hd')" class="py-3 bg-pink-600 hover:bg-pink-700 rounded-xl font-semibold text-xs text-center transition shadow-md text-white">
-                    🔥 Скачать HD
-                </button>
-                <button onclick="downloadMedia('sd')" class="py-3 bg-indigo-600 hover:bg-indigo-700 rounded-xl font-semibold text-xs text-center transition shadow-md text-white">
-                    📹 Скачать SD
-                </button>
-                <button onclick="downloadMedia('audio')" class="py-3 bg-gray-200 dark:bg-[#1c2333] hover:bg-gray-300 dark:hover:bg-[#252f45] text-gray-800 dark:text-white rounded-xl font-semibold text-xs text-center transition border border-gray-300 dark:border-gray-700">
-                    🎵 MP3
+            <!-- Выбор формата/качества и кнопка скачивания -->
+            <div class="flex gap-2 items-center">
+                <select id="qualitySelect" class="bg-gray-50 dark:bg-[#0d111a] border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-200 text-xs rounded-xl px-3 py-3.5 focus:outline-none focus:ring-2 focus:ring-pink-500">
+                    <option value="hd">🔥 Видео HD (Максимальное)</option>
+                    <option value="sd">📹 Видео SD (Экономия памяти)</option>
+                    <option value="audio">🎵 Аудио (MP3)</option>
+                </select>
+                <button onclick="downloadSelectedMedia()" class="flex-1 py-3.5 bg-pink-600 hover:bg-pink-700 rounded-xl font-semibold text-xs text-center transition shadow-md text-white">
+                    📥 Скачать файл
                 </button>
             </div>
         </div>
@@ -179,7 +178,7 @@
             }
         }
 
-        async function downloadMedia(type) {
+        async function downloadSelectedMedia() {
             const errorBox = document.getElementById('errorBox');
             errorBox.classList.add('hidden');
 
@@ -189,23 +188,23 @@
                 return;
             }
 
-            // Выбираем нужную ссылку в зависимости от нажатой кнопки
+            const quality = document.getElementById('qualitySelect').value;
             let mediaLink = '';
             let fileName = 'tiktok_video.mp4';
 
-            if (type === 'hd') {
+            if (quality === 'hd') {
                 mediaLink = cachedMediaData.hdplay || cachedMediaData.play;
                 fileName = 'tiktok_hd.mp4';
-            } else if (type === 'sd') {
-                mediaLink = cachedMediaData.play;
+            } else if (quality === 'sd') {
+                mediaLink = cachedMediaData.play; // стандартное качество (меньше весит)
                 fileName = 'tiktok_sd.mp4';
-            } else if (type === 'audio') {
+            } else if (quality === 'audio') {
                 mediaLink = cachedMediaData.music;
                 fileName = 'tiktok_audio.mp3';
             }
 
             if (!mediaLink) {
-                errorBox.innerText = 'Ссылка на этот формат недоступна';
+                errorBox.innerText = 'Ссылка на выбранный формат недоступна';
                 errorBox.classList.remove('hidden');
                 return;
             }
