@@ -38,7 +38,7 @@
             Загрузчик <span class="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-teal-400">TikCloud</span>
         </h1>
         <p class="text-sm text-gray-500 dark:text-gray-400 text-center mb-8">
-            Скачивайте видео, MP3 и фото-карусели из TikTok без водяных знаков.
+            Скачивайте видео (HD/SD), MP3 и фото-карусели из TikTok без водяных знаков.
         </p>
 
         <!-- Переключатель вкладок -->
@@ -76,12 +76,16 @@
                 </div>
             </div>
 
-            <div class="flex gap-2">
-                <button onclick="downloadMedia('video')" class="flex-1 py-3 bg-pink-600 hover:bg-pink-700 rounded-xl font-semibold text-xs text-center transition shadow-md text-white">
-                    📹 Скачать видео
+            <!-- Кнопки выбора качества и аудио -->
+            <div class="grid grid-cols-3 gap-2">
+                <button onclick="downloadMedia('hd')" class="py-3 bg-pink-600 hover:bg-pink-700 rounded-xl font-semibold text-xs text-center transition shadow-md text-white">
+                    🔥 Скачать HD
                 </button>
-                <button onclick="downloadMedia('audio')" class="flex-1 py-3 bg-gray-200 dark:bg-[#1c2333] hover:bg-gray-300 dark:hover:bg-[#252f45] text-gray-800 dark:text-white rounded-xl font-semibold text-xs text-center transition border border-gray-300 dark:border-gray-700">
-                    🎵 Скачать MP3
+                <button onclick="downloadMedia('sd')" class="py-3 bg-indigo-600 hover:bg-indigo-700 rounded-xl font-semibold text-xs text-center transition shadow-md text-white">
+                    📹 Скачать SD
+                </button>
+                <button onclick="downloadMedia('audio')" class="py-3 bg-gray-200 dark:bg-[#1c2333] hover:bg-gray-300 dark:hover:bg-[#252f45] text-gray-800 dark:text-white rounded-xl font-semibold text-xs text-center transition border border-gray-300 dark:border-gray-700">
+                    🎵 MP3
                 </button>
             </div>
         </div>
@@ -154,7 +158,6 @@
             searchBtn.innerText = 'Поиск...';
 
             try {
-                // Запрос идет прямо из браузера пользователя к публичному API
                 const res = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(url)}&hd=1`);
                 const data = await res.json();
 
@@ -186,28 +189,39 @@
                 return;
             }
 
-            const mediaLink = type === 'audio' ? cachedMediaData.music : cachedMediaData.play;
+            // Выбираем нужную ссылку в зависимости от нажатой кнопки
+            let mediaLink = '';
+            let fileName = 'tiktok_video.mp4';
+
+            if (type === 'hd') {
+                mediaLink = cachedMediaData.hdplay || cachedMediaData.play;
+                fileName = 'tiktok_hd.mp4';
+            } else if (type === 'sd') {
+                mediaLink = cachedMediaData.play;
+                fileName = 'tiktok_sd.mp4';
+            } else if (type === 'audio') {
+                mediaLink = cachedMediaData.music;
+                fileName = 'tiktok_audio.mp3';
+            }
 
             if (!mediaLink) {
-                errorBox.innerText = 'Ссылка на файл не найдена';
+                errorBox.innerText = 'Ссылка на этот формат недоступна';
                 errorBox.classList.remove('hidden');
                 return;
             }
 
             try {
-                // Скачиваем файл через Blob прямо в браузере
                 const res = await fetch(mediaLink);
                 const blob = await res.blob();
                 const downloadUrl = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = downloadUrl;
-                a.download = type === 'audio' ? 'tiktok_audio.mp3' : 'tiktok_video.mp4';
+                a.download = fileName;
                 document.body.appendChild(a);
                 a.click();
                 a.remove();
                 window.URL.revokeObjectURL(downloadUrl);
             } catch (err) {
-                // Если сработал CORS при прямом скачивании файла, открываем ссылку в новой вкладке как запасной вариант
                 window.open(mediaLink, '_blank');
             }
         }
