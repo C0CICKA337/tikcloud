@@ -8,10 +8,14 @@ DOWNLOAD_FOLDER = 'downloads'
 if not os.path.exists(DOWNLOAD_FOLDER):
     os.makedirs(DOWNLOAD_FOLDER)
 
-HEADERS = {
+# Создаем сессию для сохранения кук и стабильного соединения
+session = requests.Session()
+session.headers.update({
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-    'Accept': 'application/json, text/plain, */*'
-}
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
+    'Referer': 'https://tikwm.com/'
+})
 
 @app.route('/')
 def index():
@@ -25,25 +29,11 @@ def get_info():
         return jsonify({'error': 'Не указана ссылка'}), 400
 
     try:
-        # Используем альтернативное стабильное API для обхода блокировок 403
         api_url = f"https://tikwm.com/api/?url={url}&hd=1"
+        response = session.get(api_url, timeout=10)
         
-        # Пробуем сделать запрос с рандомизированным юзер-агентом или через другой публичный шлюз
-        response = requests.get(api_url, headers=HEADERS, timeout=15)
-        
-        if response.status_code == 403:
-            # Запасной публичный метод через лоадер
-            backup_url = f"https://lovetik.com/api/ajax/search"
-            backup_res = requests.post(backup_url, data={'query': url}, headers=HEADERS, timeout=15)
-            backup_data = backup_res.json()
-            
-            if backup_data.get('status') == 'ok':
-                return jsonify({
-                    'title': backup_data.get('title', 'Видео TikTok'),
-                    'thumbnail': backup_data.get('cover', ''),
-                    'duration': 0
-                })
-            return jsonify({'error': 'Внешнее API заблокировало доступ (403). Попробуйте позже.'}), 400
+        if response.status_code != 200:
+            return jsonify({'error': f'Ошибка API: статус {response.status_code}'}), 400
 
         res_data = response.json()
 
@@ -59,7 +49,7 @@ def get_info():
 
     except Exception as e:
         print(f"Error in get_info: {e}")
-        return jsonify({'error': f'Ошибка сервера: {str(e)}'}), 500
+        return jsonify({'error': 'Превышено время ожидания ответа от сервера TikTok. Попробуйте еще раз.'}), 500
 
 @app.route('/download', methods=['POST'])
 def download():
@@ -72,7 +62,7 @@ def download():
 
     try:
         api_url = f"https://tikwm.com/api/?url={url}&hd=1"
-        response = requests.get(api_url, headers=HEADERS, timeout=15)
+        response = session.get(api_url, timeout=10)
         res_data = response.json()
 
         if res_data.get('code') == 0:
@@ -80,7 +70,7 @@ def download():
             media_link = info.get('music') if download_type == 'audio' else info.get('play')
 
             if media_link:
-                file_res = requests.get(media_link, headers=HEADERS, stream=True, timeout=20)
+                file_res = session.get(media_link, stream=True, timeout=20)
                 ext = 'mp3' if download_type == 'audio' else 'mp4'
                 temp_filename = os.path.join(DOWNLOAD_FOLDER, f"temp_{os.getpid()}.{ext}")
                 
@@ -94,7 +84,7 @@ def download():
 
     except Exception as e:
         print(f"Error in download: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Ошибка при скачивании файла'}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
