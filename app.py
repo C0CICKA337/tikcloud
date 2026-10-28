@@ -5,7 +5,6 @@ from yt_dlp import YoutubeDL
 
 app = Flask(__name__)
 
-# Папка для временного скачивания файлов
 DOWNLOAD_FOLDER = 'downloads'
 if not os.path.exists(DOWNLOAD_FOLDER):
     os.makedirs(DOWNLOAD_FOLDER)
@@ -18,19 +17,17 @@ def index():
 def download():
     data = request.json
     url = data.get('url')
-    quality = data.get('quality', 'best') # Получаем качество (например, '360', '720' или 'best')
-    download_type = data.get('type', 'video') # 'video', 'audio' или 'slides'
+    quality = data.get('quality', 'best')
+    download_type = data.get('type', 'video')
 
     if not url:
         return jsonify({'error': 'Не указана ссылка'}), 400
 
     try:
-        # Базовые настройки для yt-dlp (без жестких путей к ffmpeg)
         ydl_opts = {
             'outtmpl': os.path.join(DOWNLOAD_FOLDER, '%(id)s.%(ext)s'),
         }
 
-        # Настройка в зависимости от типа скачивания
         if download_type == 'audio':
             ydl_opts.update({
                 'format': 'bestaudio/best',
@@ -44,14 +41,12 @@ def download():
             if quality == 'best':
                 ydl_opts['format'] = 'bestvideo+bestaudio/best'
             else:
-                # Выбираем конкретное разрешение по высоте (например, 360, 480, 720)
                 ydl_opts['format'] = f'bestvideo[height<={quality}]+bestaudio/best[height<={quality}]/best'
         
         with YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
             filename = ydl.prepare_filename(info)
             
-            # Если качали аудио, расширение изменится на mp3
             if download_type == 'audio':
                 filename = os.path.splitext(filename)[0] + '.mp3'
 
