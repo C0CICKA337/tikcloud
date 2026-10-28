@@ -19,35 +19,12 @@ def get_info():
     if not url:
         return jsonify({'error': 'Не указана ссылка'}), 400
 
-    try:
-        ydl_opts = {
-            'skip_download': True,
-            'extractor_args': {'tiktok': {'webpage_download': ['1']}}
-        }
-        with YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
-            if info:
-                formats = []
-                for f in info.get('formats', []):
-                    height = f.get('height')
-                    if height and height not in [x['height'] for x in formats]:
-                        formats.append({'height': height})
-                
-                return jsonify({
-                    'title': info.get('title', 'Видео TikTok'),
-                    'thumbnail': info.get('thumbnail', ''),
-                    'duration': info.get('duration', 0),
-                    'formats': sorted(formats, key=lambda x: x['height'], reverse=True) or [{'height': 720}, {'height': 360}]
-                })
-    except Exception:
-        pass
-
-    # Фоллбек (заглушка), если TikTok заблокировал IP сервера — сайт всё равно откроет меню выбора качества
+    # Всегда отдаем базовую информацию, чтобы интерфейс не ломался от блокировок TikTok
     return jsonify({
         'title': 'Видео TikTok',
         'thumbnail': '',
         'duration': 0,
-        'formats': [{'height': 720}, {'height': 360}, {'height': 480}]
+        'formats': [{'height': 720}, {'height': 480}, {'height': 360}]
     })
 
 @app.route('/download', methods=['POST'])
@@ -63,7 +40,6 @@ def download():
     try:
         ydl_opts = {
             'outtmpl': os.path.join(DOWNLOAD_FOLDER, '%(id)s.%(ext)s'),
-            'extractor_args': {'tiktok': {'webpage_download': ['1']}},
         }
 
         if download_type == 'audio':
