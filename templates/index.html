@@ -38,7 +38,7 @@
             Загрузчик <span class="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-teal-400">TikCloud</span>
         </h1>
         <p class="text-sm text-gray-500 dark:text-gray-400 text-center mb-8">
-            Скачивайте видео в HD и SD, MP3 и фото-карусели из TikTok без водяных знаков.
+            Скачивайте видео, MP3 и фото-карусели из TikTok без водяных знаков.
         </p>
 
         <!-- Переключатель вкладок -->
@@ -76,19 +76,14 @@
                 </div>
             </div>
 
-            <!-- Кнопки выбора HD / SD -->
-            <div class="grid grid-cols-2 gap-2">
-                <button onclick="downloadMedia('hd')" class="py-3 bg-pink-600 hover:bg-pink-700 rounded-xl font-semibold text-xs text-center transition shadow-md text-white">
-                    🔥 Скачать HD
-                </button>
-                <button onclick="downloadMedia('sd')" class="py-3 bg-indigo-600 hover:bg-indigo-700 rounded-xl font-semibold text-xs text-center transition shadow-md text-white">
-                    📹 Скачать SD
-                </button>
-            </div>
+            <!-- Кнопка скачивания видео (единая) -->
+            <button onclick="downloadMedia('video')" class="w-full py-3.5 bg-pink-600 hover:bg-pink-700 rounded-xl font-semibold text-xs text-center transition shadow-md text-white flex items-center justify-center gap-2">
+                📥 Скачать видео без водяного знака
+            </button>
 
             <!-- Отдельная кнопка для MP3 -->
             <button onclick="downloadMedia('audio')" class="w-full py-3 bg-gray-200 dark:bg-[#1c2333] hover:bg-gray-300 dark:hover:bg-[#252f45] text-gray-800 dark:text-white rounded-xl font-semibold text-xs text-center transition border border-gray-300 dark:border-gray-700 flex items-center justify-center gap-2">
-                🎵 Скачать MP3
+                🎵 Скачать аудио (MP3)
             </button>
         </div>
     </main>
@@ -191,25 +186,18 @@
                 return;
             }
 
-            let mediaLink = '';
-            let fileName = 'tiktok_video.mp4';
-
-            if (type === 'hd') {
-                mediaLink = cachedMediaData.hdplay || cachedMediaData.play;
-                fileName = 'tiktok_hd.mp4';
-            } else if (type === 'sd') {
-                mediaLink = cachedMediaData.play;
-                fileName = 'tiktok_sd.mp4';
-            } else if (type === 'audio') {
-                mediaLink = cachedMediaData.music;
-                fileName = 'tiktok_audio.mp3';
-            }
+            const mediaLink = type === 'audio' ? cachedMediaData.music : (cachedMediaData.hdplay || cachedMediaData.play);
 
             if (!mediaLink) {
                 errorBox.innerText = 'Ссылка на файл не найдена';
                 errorBox.classList.remove('hidden');
                 return;
             }
+
+            // Генерируем уникальный случайный суффикс (от 1000 до 9999) для имени файла
+            const randomId = Math.floor(1 + Math.random() * 9000);
+            const ext = type === 'audio' ? 'mp3' : 'mp4';
+            const fileName = `clip_TikCloud_${randomId}.${ext}`;
 
             try {
                 const res = await fetch(mediaLink);
