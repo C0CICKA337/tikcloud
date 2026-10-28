@@ -1,88 +1,136 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TikCloud — Скачать видео из TikTok</title>
+    <title>TikCloud — Загрузчик TikTok</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
 </head>
-<body class="bg-gray-900 text-white min-h-screen flex flex-col items-center justify-between p-4">
-    <div class="w-full max-w-md flex flex-col items-center pt-8">
+<body class="bg-gray-100 dark:bg-[#0b0f19] text-gray-900 dark:text-white min-h-screen flex flex-col justify-between selection:bg-pink-500 selection:text-white transition-colors duration-300">
+    
+    <!-- Верхняя панель (Хэдер) -->
+    <header class="w-full max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
         <!-- Логотип -->
-        <div class="flex items-center gap-3 mb-6">
-            <div class="bg-gradient-to-tr from-pink-500 to-indigo-500 p-3 rounded-2xl shadow-lg">
-                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path></svg>
+        <div class="flex items-center gap-3">
+            <div class="bg-gradient-to-tr from-pink-500 to-indigo-600 p-2 rounded-xl shadow-lg flex items-center justify-center">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path></svg>
             </div>
-            <h1 class="text-2xl font-bold tracking-wide">TikCloud</h1>
+            <span class="text-xl font-bold tracking-wide">TikCloud</span>
         </div>
 
-        <p class="text-xs text-gray-400 text-center mb-6 px-4">Скачивайте видео, аудио и фото из TikTok без водяных знаков.</p>
+        <!-- Правые кнопки в шапке -->
+        <div class="flex items-center gap-3">
+            <button onclick="toggleTheme()" class="bg-white dark:bg-[#161b26] hover:bg-gray-200 dark:hover:bg-[#1f2636] border border-gray-300 dark:border-gray-800 p-2.5 rounded-full text-gray-700 dark:text-gray-300 transition shadow-sm" title="Сменить тему">
+                <svg id="themeIcon" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+            </button>
+            <div class="flex items-center gap-2 bg-white dark:bg-[#161b26] border border-gray-300 dark:border-gray-800 px-3.5 py-2 rounded-full text-xs font-medium text-gray-800 dark:text-gray-200 shadow-sm">
+                <span class="text-sky-500">⚡</span> Cloud Fast
+            </div>
+        </div>
+    </header>
+
+    <!-- Основной контент по центру -->
+    <main class="w-full max-w-xl mx-auto px-4 flex flex-col items-center my-auto -mt-12">
+        <h1 class="text-4xl font-extrabold tracking-tight text-center mb-3">
+            Загрузчик <span class="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-teal-400">TikCloud</span>
+        </h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 text-center mb-8">
+            Скачивайте видео, MP3 и фото-карусели из TikTok без водяных знаков.
+        </p>
 
         <!-- Переключатель вкладок -->
-        <div class="w-full bg-gray-800/80 p-1.5 rounded-2xl flex gap-2 mb-6 border border-gray-700/50">
-            <button id="tabVideo" onclick="switchTab('video')" class="flex-1 py-3 rounded-xl font-medium text-sm transition flex items-center justify-center gap-2 bg-pink-600 text-white shadow-lg">
-                🎥 Видео / MP3
+        <div class="bg-white dark:bg-[#131824] p-1.5 rounded-2xl flex gap-2 mb-6 border border-gray-300 dark:border-gray-800/80 shadow-md w-full max-w-md transition-colors duration-300">
+            <button id="tabVideo" onclick="switchTab('video')" class="flex-1 py-3 rounded-xl font-medium text-sm transition flex items-center justify-center gap-2 bg-pink-600 text-white shadow-lg shadow-pink-600/25">
+                <span>🎥</span> Видео / MP3
             </button>
-            <button id="tabPhoto" onclick="switchTab('photo')" class="flex-1 py-3 rounded-xl font-medium text-sm transition flex items-center justify-center gap-2 text-gray-400 hover:text-white">
-                🖼️ Фото / Карусель
+            <button id="tabPhoto" onclick="switchTab('photo')" class="flex-1 py-3 rounded-xl font-medium text-sm transition flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                <span>🖼️</span> Фото / Карусель
             </button>
         </div>
 
-        <!-- Поле ввода -->
-        <div class="w-full bg-gray-800 rounded-2xl shadow-xl p-4 border border-gray-700 space-y-4">
-            <div class="relative flex items-center">
-                <span class="absolute left-4 text-gray-400">🔗</span>
-                <input type="text" id="urlInput" placeholder="https://vt.tiktok.com/..." 
-                       class="w-full pl-11 pr-4 py-3.5 bg-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 text-sm border border-gray-700 text-gray-200">
+        <!-- Поле ввода ссылки -->
+        <div class="w-full bg-white dark:bg-[#131824] rounded-2xl shadow-xl p-3 border border-gray-300 dark:border-gray-800 flex items-center gap-2 transition-colors duration-300">
+            <div class="relative flex-1 flex items-center">
+                <span class="absolute left-4 text-gray-400 dark:text-gray-500">🔗</span>
+                <input type="text" id="urlInput" placeholder="Вставьте ссылку на видео TikTok..." 
+                       class="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-[#0d111a] rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 text-sm border border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 transition-colors duration-300">
             </div>
             <button onclick="fetchData()" id="searchBtn" 
-                    class="w-full bg-pink-600 hover:bg-pink-700 py-3.5 rounded-xl font-semibold transition flex items-center justify-center gap-2 shadow-lg shadow-pink-600/20">
+                    class="bg-pink-600 hover:bg-pink-700 px-6 py-3 rounded-xl font-semibold transition flex items-center gap-2 shadow-lg shadow-pink-600/25 text-sm whitespace-nowrap text-white">
                 🔍 Найти
             </button>
         </div>
 
-        <!-- Ошибка -->
-        <div id="errorBox" class="hidden w-full mt-4 p-4 bg-red-950/80 border border-red-500/50 rounded-xl text-red-200 text-xs leading-relaxed"></div>
+        <!-- Блок ошибок -->
+        <div id="errorBox" class="hidden w-full mt-4 p-4 bg-red-100 dark:bg-red-950/80 border border-red-400 dark:border-red-500/50 rounded-xl text-red-700 dark:text-red-200 text-xs"></div>
 
-        <!-- Результат -->
-        <div id="resultBox" class="hidden w-full bg-gray-800 rounded-2xl shadow-xl p-4 border border-gray-700 mt-4 space-y-4">
-            <div class="flex gap-4 items-center bg-gray-900/60 p-3 rounded-xl border border-gray-700/50">
-                <img id="thumb" class="w-20 h-20 object-cover rounded-lg bg-gray-700" src="" alt="Thumbnail">
+        <!-- Блок результата -->
+        <div id="resultBox" class="hidden w-full bg-white dark:bg-[#131824] rounded-2xl shadow-xl p-4 border border-gray-300 dark:border-gray-800 mt-4 space-y-4 transition-colors duration-300">
+            <div class="flex gap-4 items-center bg-gray-50 dark:bg-[#0d111a] p-3 rounded-xl border border-gray-200 dark:border-gray-800">
+                <img id="thumb" class="w-20 h-20 object-cover rounded-lg bg-gray-200 dark:bg-gray-800" src="" alt="Thumbnail">
                 <div class="flex-1 min-w-0">
-                    <h2 id="videoTitle" class="font-medium text-xs text-gray-200 line-clamp-2"></h2>
+                    <h2 id="videoTitle" class="font-medium text-xs text-gray-800 dark:text-gray-200 line-clamp-2"></h2>
                 </div>
             </div>
 
-            <div id="videoActions" class="flex gap-2">
-                <button onclick="downloadMedia('video')" class="flex-1 py-3 bg-pink-600 hover:bg-pink-700 rounded-xl font-semibold text-xs text-center transition shadow-md">
+            <div class="flex gap-2">
+                <button onclick="downloadMedia('video')" class="flex-1 py-3 bg-pink-600 hover:bg-pink-700 rounded-xl font-semibold text-xs text-center transition shadow-md text-white">
                     📹 Скачать видео
                 </button>
-                <button onclick="downloadMedia('audio')" class="flex-1 py-3 bg-gray-700 hover:bg-gray-600 rounded-xl font-semibold text-xs text-center transition border border-gray-600">
+                <button onclick="downloadMedia('audio')" class="flex-1 py-3 bg-gray-200 dark:bg-[#1c2333] hover:bg-gray-300 dark:hover:bg-[#252f45] text-gray-800 dark:text-white rounded-xl font-semibold text-xs text-center transition border border-gray-300 dark:border-gray-700">
                     🎵 Скачать MP3
                 </button>
             </div>
         </div>
-    </div>
+    </main>
 
-    <!-- Копирайт -->
-    <footer class="text-xs text-gray-500 py-6">
+    <!-- Подвал (Футер) -->
+    <footer class="w-full text-center text-xs text-gray-500 dark:text-gray-500 py-6 border-t border-gray-200 dark:border-gray-900">
         © 2026 TikCloud. Все права защищены.
     </footer>
 
     <script>
-        let currentMode = 'video';
+        function toggleTheme() {
+            const html = document.documentElement;
+            const themeIcon = document.getElementById('themeIcon');
+            
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                themeIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>';
+                localStorage.setItem('theme', 'light');
+            } else {
+                html.classList.add('dark');
+                themeIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>';
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'light') {
+                document.documentElement.classList.remove('dark');
+                document.getElementById('themeIcon').innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>';
+            }
+        });
 
         function switchTab(mode) {
-            currentMode = mode;
             const tabVideo = document.getElementById('tabVideo');
             const tabPhoto = document.getElementById('tabPhoto');
+            const urlInput = document.getElementById('urlInput');
 
             if (mode === 'video') {
-                tabVideo.className = "flex-1 py-3 rounded-xl font-medium text-sm transition flex items-center justify-center gap-2 bg-pink-600 text-white shadow-lg";
-                tabPhoto.className = "flex-1 py-3 rounded-xl font-medium text-sm transition flex items-center justify-center gap-2 text-gray-400 hover:text-white";
+                tabVideo.className = "flex-1 py-3 rounded-xl font-medium text-sm transition flex items-center justify-center gap-2 bg-pink-600 text-white shadow-lg shadow-pink-600/25";
+                tabPhoto.className = "flex-1 py-3 rounded-xl font-medium text-sm transition flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white";
+                urlInput.placeholder = "Вставьте ссылку на видео TikTok...";
             } else {
-                tabPhoto.className = "flex-1 py-3 rounded-xl font-medium text-sm transition flex items-center justify-center gap-2 bg-pink-600 text-white shadow-lg";
-                tabVideo.className = "flex-1 py-3 rounded-xl font-medium text-sm transition flex items-center justify-center gap-2 text-gray-400 hover:text-white";
+                tabPhoto.className = "flex-1 py-3 rounded-xl font-medium text-sm transition flex items-center justify-center gap-2 bg-pink-600 text-white shadow-lg shadow-pink-600/25";
+                tabVideo.className = "flex-1 py-3 rounded-xl font-medium text-sm transition flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white";
+                urlInput.placeholder = "Вставьте ссылку на фото-карусель TikTok...";
             }
         }
 
@@ -92,4 +140,80 @@
             const resultBox = document.getElementById('resultBox');
             const searchBtn = document.getElementById('searchBtn');
 
-            errorBox.
+            errorBox.classList.add('hidden');
+            resultBox.classList.add('hidden');
+
+            if (!url) {
+                errorBox.innerText = 'Пожалуйста, введите ссылку на TikTok';
+                errorBox.classList.remove('hidden');
+                return;
+            }
+
+            searchBtn.disabled = true;
+            searchBtn.innerText = 'Поиск...';
+
+            try {
+                const res = await fetch('/get-info', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+
+                const data = await res.json();
+
+                if (!res.ok || data.error) {
+                    throw new Error(data.error || 'Не удалось получить данные');
+                }
+
+                document.getElementById('videoTitle').innerText = data.title || 'Видео TikTok';
+                document.getElementById('thumb').src = data.thumbnail || '';
+                resultBox.classList.remove('hidden');
+            } catch (err) {
+                errorBox.innerText = err.message;
+                errorBox.classList.remove('hidden');
+            } finally {
+                searchBtn.disabled = false;
+                searchBtn.innerText = '🔍 Найти';
+            }
+        }
+
+        async function downloadMedia(type) {
+            const url = document.getElementById('urlInput').value.trim();
+            const errorBox = document.getElementById('errorBox');
+            errorBox.classList.add('hidden');
+
+            if (!url) {
+                errorBox.innerText = 'Пожалуйста, введите ссылку';
+                errorBox.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                const res = await fetch('/download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, type })
+                });
+
+                if (!res.ok) {
+                    const data = await res.json();
+                    throw new Error(data.error || 'Ошибка скачивания');
+                }
+
+                const blob = await res.blob();
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = type === 'audio' ? 'tiktok_audio.mp3' : 'tiktok_video.mp4';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(downloadUrl);
+            } catch (err) {
+                errorBox.innerText = err.message;
+                errorBox.classList.remove('hidden');
+            }
+        }
+    </script>
+</body>
+</html>

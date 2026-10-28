@@ -29,10 +29,7 @@ def get_info():
             return jsonify({
                 'title': info.get('title', 'Видео TikTok'),
                 'thumbnail': info.get('cover', ''),
-                'duration': info.get('duration', 0),
-                'formats': [
-                    {'height': 'best', 'label': 'Лучшее качество (HD)'}
-                ]
+                'duration': info.get('duration', 0)
             })
     except Exception as e:
         print(f"Error in get_info: {e}")
@@ -40,8 +37,7 @@ def get_info():
     return jsonify({
         'title': 'Видео TikTok',
         'thumbnail': '',
-        'duration': 0,
-        'formats': [{'height': 'best', 'label': 'Лучшее качество'}]
+        'duration': 0
     })
 
 @app.route('/download', methods=['POST'])
@@ -71,8 +67,7 @@ def download():
                     for chunk in file_res.iter_content(chunk_size=8192):
                         f.write(chunk)
                 
-                response = send_file(temp_filename, as_attachment=True, download_name=f"tiktok.{ext}")
-                return response
+                return send_file(temp_filename, as_attachment=True, download_name=f"tiktok.{ext}")
 
         return jsonify({'error': 'Не удалось получить ссылку на файл от API'}), 400
 
