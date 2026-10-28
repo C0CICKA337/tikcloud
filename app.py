@@ -20,11 +20,15 @@ def get_info():
         return jsonify({'error': 'Не указана ссылка'}), 400
 
     try:
-        ydl_opts = {'skip_download': True}
+        ydl_opts = {
+            'skip_download': True,
+            'extractor_args': {'tiktok': {'webpage_download': ['1']}}
+        }
         with YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
+            if not info:
+                return jsonify({'error': 'Не удалось получить данные о видео от TikTok'}), 500
             
-            # Извлекаем доступные форматы или базовую информацию для интерфейса
             formats = []
             for f in info.get('formats', []):
                 height = f.get('height')
@@ -33,8 +37,8 @@ def get_info():
 
             response_data = {
                 'title': info.get('title', 'Видео TikTok'),
-                'thumbnail': info.get('thumbnail'),
-                'duration': info.get('duration'),
+                'thumbnail': info.get('thumbnail', ''),
+                'duration': info.get('duration', 0),
                 'formats': sorted(formats, key=lambda x: x['height'], reverse=True)
             }
         return jsonify(response_data)
@@ -54,6 +58,7 @@ def download():
     try:
         ydl_opts = {
             'outtmpl': os.path.join(DOWNLOAD_FOLDER, '%(id)s.%(ext)s'),
+            'extractor_args': {'tiktok': {'webpage_download': ['1']}}
         }
 
         if download_type == 'audio':
