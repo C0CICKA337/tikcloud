@@ -1,12 +1,8 @@
 import os
+import requests
 from flask import Flask, render_template, request, send_file, jsonify
-from yt_dlp import YoutubeDL
 
 app = Flask(__name__)
-
-DOWNLOAD_FOLDER = 'downloads'
-if not os.path.exists(DOWNLOAD_FOLDER):
-    os.makedirs(DOWNLOAD_FOLDER)
 
 @app.route('/')
 def index():
@@ -19,78 +15,69 @@ def get_info():
     if not url:
         return jsonify({'error': 'Не указана ссылка'}), 400
 
-    title = 'Видео TikTok'
-    thumbnail = ''
-    duration = 0
-
     try:
-        ydl_opts = {
-            'skip_download': True,
-            'impersonate': 'chrome',
-            'extractor_args': {'tiktok': {'webpage_download': ['1']}}
-        }
-        with YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
-            if info:
-                title = info.get('title', 'Видео TikTok')
-                thumbnail = info.get('thumbnail', '')
-                duration = info.get('duration', 0)
+        api_url = f"https://tikwm.com/api/?url={url}"
+        response = requests.get(api_url, timeout=10)
+        res_data = response.json()
+
+        if res_data.get('code') == 0:
+            info = res_data.get('data', {})
+            return jsonify({
+                'title': info.get('title', 'Видео TikTok'),
+                'thumbnail': info.get('cover', ''),
+                'duration': info.get('duration', 0),
+                'formats': [
+                    {'height': 'best', 'label': 'Лучшее качество (HD)'},
+                    {'height': 'watermark', 'label': 'С водяным знаком'}
+                ]
+            })
     except Exception:
         pass
 
-    # Всегда отдаем безопасный ответ, чтобы JS фронтенда никогда не выдавал 'undefined'
+    # Безопасный фоллбек, чтобы интерфейс всегда открывал кнопки
     return jsonify({
-        'title': title,
-        'thumbnail': thumbnail,
-        'duration': duration,
-        'formats': [
-            {'height': 'best', 'label': 'Лучшее качество'},
-            {'height': '720', 'label': '720p HD'},
-            {'height': '480', 'label': '480p SD'},
-            {'height': '360', 'label': '360p Low'}
-        ]
+        'title': 'Видео TikTok',
+        'thumbnail': '',
+        'duration': 0,
+        'formats': [{'height': 'best', 'label': 'Лучшее качество'}]
     })
 
 @app.route('/download', methods=['POST'])
 def download():
     data = request.json or {}
     url = data.get('url')
-    quality = data.get('quality', 'best')
     download_type = data.get('type', 'video')
 
     if not url:
         return jsonify({'error': 'Не указана ссылка'}), 400
 
     try:
-        ydl_opts = {
-            'outtmpl': os.path.join(DOWNLOAD_FOLDER, '%(id)s.%(ext)s'),
-            'impersonate': 'chrome',
-            'extractor_args': {'tiktok': {'webpage_download': ['1']}},
-        }
+        api_url = f"https://tikwm.com/api/?url={url}"
+        response = requests.get(api_url, timeout=10)
+        res_data = response.json()
 
-        if download_type == 'audio':
-            ydl_opts.update({
-                'format': 'bestaudio/best',
-                'postprocessors': [{
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': 'mp3',
-                    'preferredquality': '192',
-                }],
-            })
-        elif download_type == 'video':
-            if quality == 'best':
-                ydl_opts['format'] = 'bestvideo+bestaudio/best'
-            else:
-                ydl_opts['format'] = f'bestvideo[height<={quality}]+bestaudio/best[height<={quality}]/best'
-
-        with YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            filename = ydl.prepare_filename(info)
-
+        if res_data.get('code') == 0:
+            info = res_data.get('data', {})
+            
             if download_type == 'audio':
-                filename = os.path.splitext(filename)[0] + '.mp3'
+                media_link = info.get('music')
+            else:
+                media_link = info.get('play') # Ссылка на видео без водяного знака
 
-        return send_file(filename, as_attachment=True)
+            if media_link:
+                # Скачиваем файл во временную памету и отдаем клиенту
+                file_res = requests.get(media_link, stream=True, timeout=15)
+                ext = 'mp3' if download_type == 'audio' else 'mp4'
+                temp_filename = f"tiktok_download.{ext}"
+                
+                with open(temp_filename, 'wb') as f:
+                    for chunk in file_res.iter_content(chunk_size=8192):
+                        f.write(chunk)
+                
+                response = send_file(temp_filename, as_attachment=True)
+                return response
+
+        return jsonify({'error': 'Не удалось получить файл от TikTok'}), 400
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
