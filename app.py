@@ -4,14 +4,12 @@ import yt_dlp
 
 app = Flask(__name__)
 
-# Автоматически создаем cookies.txt из переменной окружения на сервере Render,
-# чтобы обходить блокировку YouTube («Sign in to confirm you’re not a bot»)
+# Автоматически создаем cookies.txt из переменной окружения на сервере Render
 cookies_content = os.environ.get("YOUTUBE_COOKIES")
 if cookies_content:
     with open("cookies.txt", "w", encoding="utf-8") as f:
         f.write(cookies_content)
 
-# Создаем папку для загрузок, если её нет
 DOWNLOAD_FOLDER = 'downloads'
 os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
 
@@ -30,9 +28,15 @@ def youtube_info():
     ydl_opts = {
         'quiet': True,
         'no_warnings': True,
+        'geo_bypass': True,
         'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     }
     
+    # Если на Render добавлена переменная с прокси (например, socks5://IP:PORT), подставляем её
+    proxy_url = os.environ.get("PROXY_URL")
+    if proxy_url:
+        ydl_opts['proxy'] = proxy_url
+
     if os.path.exists('cookies.txt'):
         ydl_opts['cookiefile'] = 'cookies.txt'
 
@@ -47,7 +51,6 @@ def youtube_info():
                 'formats': []
             }
             
-            # Универсальный сбор доступных видеопотоков (актуально для Shorts и видео)
             formats = info.get('formats', [])
             if formats:
                 for f in formats:
@@ -59,7 +62,6 @@ def youtube_info():
                             'filesize': f.get('filesize') or f.get('filesize_approx') or 0
                         })
             
-            # Если специфичные форматы не отфильтровались, добавляем универсальный вариант
             if not video_data['formats']:
                 video_data['formats'].append({
                     'format_id': 'best',
