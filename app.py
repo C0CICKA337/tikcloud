@@ -1,4 +1,5 @@
 import os
+import traceback
 import yt_dlp
 from flask import Flask, jsonify, request, send_from_directory
 
@@ -40,6 +41,8 @@ def get_youtube_info():
                 'url': info.get('url'),
             })
     except Exception as e:
+        err_msg = ''.join(traceback.format_exception(type(e), e, e.__traceback__))
+        print(err_msg)  # выведет в логи Render
         return jsonify({'status': 'error', 'message': str(e)}), 400
 
 
