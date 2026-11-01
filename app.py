@@ -1,119 +1,70 @@
 import os
-import random
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify
 import yt_dlp
 
 app = Flask(__name__)
 
-# Папка для временного скачивания файлов
-TEMP_DIR = 'temp_downloads'
-os.makedirs(TEMP_DIR, exist_ok=True)
+# Автоматически создаем cookies.txt из переменной окружения на сервере Render,
+# чтобы обходить блокировку YouTube («Sign in to confirm you’re not a bot»)
+cookies_content = os.environ.get("YOUTUBE_COOKIES")
+if cookies_content:
+    with open("cookies.txt", "w", encoding="utf-8") as f:
+        f.write(cookies_content)
+
+# Создаем папку для загрузок, если её нет
+DOWNLOAD_FOLDER = 'downloads'
+os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
-# API для получения информации о видео с YouTube (с поддержкой Shorts и маскировкой под браузер)
 @app.route('/api/youtube-info', methods=['POST'])
 def youtube_info():
     data = request.get_json()
     url = data.get('url')
     
     if not url:
-        return jsonify({'error': 'Ссылка не указана'}), 400
+        return jsonify({'error': 'URL не указан'}), 400
 
+    # Общие параметры для yt-dlp с поддержкой cookies
     ydl_opts = {
         'quiet': True,
         'no_warnings': True,
         'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     }
+    
+    # Если файл cookies.txt успешно создался, подключаем его
+    if os.path.exists('cookies.txt'):
+        ydl_opts['cookiefile'] = 'cookies.txt'
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
             
-            formats = []
-            seen_heights = set()
-            
-            for f in info.get('formats', []):
-                if f.get('vcodec') != 'none' and f.get('height'):
-                    height = f['height']
-                    if height not in seen_heights and height >= 144:
-                        seen_heights.add(height)
-                        formats.append({
-                            'format_id': f['format_id'],
-                            'height': height,
-                            'ext': f.get('ext', 'mp4')
-                        })
-            
-            formats = sorted(formats, key=lambda x: x['height'], reverse=True)
-
-            return jsonify({
-                'title': info.get('title', 'YouTube Video'),
+            # Собираем базовую информацию о видео/шортсе
+            video_data = {
+                'title': info.get('title', 'Видео без названия'),
+                'duration': info.get('duration', 0),
                 'thumbnail': info.get('thumbnail', ''),
-                'formats': formats
-            })
-    except Exception as e:
-        print(f"DEBUG ERROR: {e}")
-        return jsonify({'error': 'Не удалось получить данные с YouTube'}), 400
-
-# API для скачивания с учетом выбранного качества, склейкой ffmpeg и конвертацией в нормальный MP4
-@app.route('/api/download-youtube', methods=['GET'])
-def download_youtube():
-    url = request.args.get('url')
-    download_type = request.args.get('type', 'video')
-    format_id = request.args.get('format_id') # Ловим выбранное качество с фронтенда
-    
-    random_id = random.randint(1000, 9999)
-    
-    if download_type == 'audio':
-        ydl_opts = {
-            'format': 'bestaudio/best',
-            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'outtmpl': os.path.join(TEMP_DIR, f'clip_TikCloud_{random_id}.%(ext)s'),
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-                'preferredquality': '192',
-            }],
-        }
-        filename = f'clip_TikCloud_{random_id}.mp3'
-    else:
-        # Если юзер выбрал конкретное качество — качаем его + лучший звук, иначе берем best
-        chosen_format = f'{format_id}+ba/b' if format_id else 'bv*+ba/b'
-        
-        ydl_opts = {
-            'format': chosen_format,
-            'merge_output_format': 'mp4',
-            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            # Жестко конвертируем в универсальный H.264 + AAC
-            'postprocessors': [{
-                'key': 'FFmpegVideoConvertor',
-                'preferedformat': 'mp4',
-            }],
-            'outtmpl': os.path.join(TEMP_DIR, f'clip_TikCloud_{random_id}.%(ext)s'),
-        }
-        filename = f'clip_TikCloud_{random_id}.mp4'
-
-    file_path = None
-    try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.extract_info(url, download=True)
+                'formats': []
+            }
             
-            for f in os.listdir(TEMP_DIR):
-                if str(random_id) in f:
-                    file_path = os.path.join(TEMP_DIR, f)
-                    ext = os.path.splitext(f)[1]
-                    filename = f'clip_TikCloud_{random_id}{ext}'
-                    break
-
-        if not file_path or not os.path.exists(file_path):
-            return "Файл не найден после скачивания", 500
-
-        return send_file(file_path, as_attachment=True, download_name=filename)
+            # Доступные форматы для скачивания
+            for f in info.get('formats', []):
+                if f.get('ext') in ['mp4', 'webm']:
+                    video_data['formats'].append({
+                        'format_id': f.get('format_id'),
+                        'resolution': f.get('format_note') or f.get('resolution') or 'unknown',
+                        'ext': f.get('ext'),
+                        'filesize': f.get('filesize') or f.get('filesize_approx') or 0
+                    })
+                    
+            return jsonify(video_data)
+            
     except Exception as e:
-        print(f"DOWNLOAD ERROR: {e}")
-        return str(e), 500
+        print(f"DEBUG ERROR: {str(e)}")
+        return jsonify({'error': 'Не удалось получить данные с YouTube'}), 400
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
