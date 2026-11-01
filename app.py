@@ -7,8 +7,8 @@ app = Flask(__name__)
 DOWNLOAD_FOLDER = 'downloads'
 os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
 
-# Официальный или любой стабильный публичный инстанс Cobalt API
-COBALT_API_URL = "https://api.cobalt.tools/api/json"
+# Актуальный эндпоинт Cobalt API v10
+COBALT_API_URL = "https://api.cobalt.tools"
 
 @app.route('/')
 def index():
@@ -33,7 +33,6 @@ def youtube_info():
     }
 
     try:
-        # Делаем запрос к Cobalt API вместо тяжелого локального yt-dlp
         response = requests.post(COBALT_API_URL, json=payload, headers=headers, timeout=15)
         res_data = response.json()
 
@@ -41,8 +40,6 @@ def youtube_info():
             error_msg = res_data.get("text", "Ошибка при обработке ссылки через Cobalt")
             return jsonify({'error': error_msg}), 400
 
-        # Cobalt может вернуть разные типы ответа (redirect, tunnel, picker)
-        status = res_data.get("status")
         direct_url = res_data.get("url") or res_data.get("picker", [{}])[0].get("url")
 
         if not direct_url:
