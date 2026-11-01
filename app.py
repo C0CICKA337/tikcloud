@@ -13,7 +13,7 @@ os.makedirs(TEMP_DIR, exist_ok=True)
 def index():
     return render_template('index.html')
 
-# API для получения информации о видео с форматами
+# API для получения информации о видео с YouTube (с поддержкой Shorts и маскировкой под браузер)
 @app.route('/api/youtube-info', methods=['POST'])
 def youtube_info():
     data = request.get_json()
@@ -25,6 +25,7 @@ def youtube_info():
     ydl_opts = {
         'quiet': True,
         'no_warnings': True,
+        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     }
 
     try:
@@ -35,7 +36,6 @@ def youtube_info():
             seen_heights = set()
             
             for f in info.get('formats', []):
-                # Собираем только те форматы, где есть и видео, и звук сразу, либо доступные разрешения
                 if f.get('vcodec') != 'none' and f.get('height'):
                     height = f['height']
                     if height not in seen_heights and height >= 144:
@@ -54,9 +54,10 @@ def youtube_info():
                 'formats': formats
             })
     except Exception as e:
+        print(f"DEBUG ERROR: {e}")
         return jsonify({'error': 'Не удалось получить данные с YouTube'}), 400
 
-# API для скачивания с учетом выбранного качества и правильным кодеком MP4
+# API для скачивания с учетом выбранного качества, склейкой ffmpeg и конвертацией в нормальный MP4
 @app.route('/api/download-youtube', methods=['GET'])
 def download_youtube():
     url = request.args.get('url')
@@ -68,6 +69,7 @@ def download_youtube():
     if download_type == 'audio':
         ydl_opts = {
             'format': 'bestaudio/best',
+            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'outtmpl': os.path.join(TEMP_DIR, f'clip_TikCloud_{random_id}.%(ext)s'),
             'postprocessors': [{
                 'key': 'FFmpegExtractAudio',
@@ -77,13 +79,14 @@ def download_youtube():
         }
         filename = f'clip_TikCloud_{random_id}.mp3'
     else:
-        # Если пользователь выбрал конкретное качество — качаем его + лучший звук, иначе берем best
+        # Если юзер выбрал конкретное качество — качаем его + лучший звук, иначе берем best
         chosen_format = f'{format_id}+ba/b' if format_id else 'bv*+ba/b'
         
         ydl_opts = {
             'format': chosen_format,
             'merge_output_format': 'mp4',
-            # Жестко конвертируем в универсальный H.264 + AAC, чтобы Виндовс открывала без кодеков
+            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            # Жестко конвертируем в универсальный H.264 + AAC
             'postprocessors': [{
                 'key': 'FFmpegVideoConvertor',
                 'preferedformat': 'mp4',
@@ -109,6 +112,7 @@ def download_youtube():
 
         return send_file(file_path, as_attachment=True, download_name=filename)
     except Exception as e:
+        print(f"DOWNLOAD ERROR: {e}")
         return str(e), 500
 
 if __name__ == '__main__':
