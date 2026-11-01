@@ -29,14 +29,10 @@ def youtube_info():
         'quiet': True,
         'no_warnings': True,
         'geo_bypass': True,
+        'format': 'best',  # Надежный выбор лучшего качества без ручного перебора потоков
         'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     }
     
-    # Если на Render добавлена переменная с прокси (например, socks5://IP:PORT), подставляем её
-    proxy_url = os.environ.get("PROXY_URL")
-    if proxy_url:
-        ydl_opts['proxy'] = proxy_url
-
     if os.path.exists('cookies.txt'):
         ydl_opts['cookiefile'] = 'cookies.txt'
 
@@ -48,27 +44,15 @@ def youtube_info():
                 'title': info.get('title', 'Видео без названия'),
                 'duration': info.get('duration', 0),
                 'thumbnail': info.get('thumbnail', ''),
-                'formats': []
+                'formats': [
+                    {
+                        'format_id': 'best',
+                        'resolution': info.get('resolution') or 'Best Quality',
+                        'ext': info.get('ext', 'mp4'),
+                        'filesize': info.get('filesize') or info.get('filesize_approx') or 0
+                    }
+                ]
             }
-            
-            formats = info.get('formats', [])
-            if formats:
-                for f in formats:
-                    if f.get('vcodec') != 'none':
-                        video_data['formats'].append({
-                            'format_id': f.get('format_id'),
-                            'resolution': f.get('format_note') or f.get('resolution') or 'HD',
-                            'ext': f.get('ext', 'mp4'),
-                            'filesize': f.get('filesize') or f.get('filesize_approx') or 0
-                        })
-            
-            if not video_data['formats']:
-                video_data['formats'].append({
-                    'format_id': 'best',
-                    'resolution': 'Best Quality',
-                    'ext': 'mp4',
-                    'filesize': 0
-                })
                     
             return jsonify(video_data)
             
