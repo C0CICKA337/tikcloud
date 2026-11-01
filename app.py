@@ -4,11 +4,8 @@ from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
 
-DOWNLOAD_FOLDER = 'downloads'
-os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
-
-# Актуальный эндпоинт Cobalt API v10
-COBALT_API_URL = "https://api.cobalt.tools"
+# Адрес нашего личного прокси на Fly.io
+FLY_PROXY_URL = "https://tikcloud-proxy.fly.dev/parse"
 
 @app.route('/')
 def index():
@@ -22,49 +19,35 @@ def youtube_info():
     if not url:
         return jsonify({'error': 'URL не указан'}), 400
 
-    headers = {
-        "Accept": "application/json",
-        "Content-Type": "application/json"
-    }
-    
-    payload = {
-        "url": url,
-        "videoQuality": "max"
-    }
-
     try:
-        response = requests.post(COBALT_API_URL, json=payload, headers=headers, timeout=15)
-        res_data = response.json()
-
-        if response.status_code != 200 or res_data.get("status") in ["error", "rate-limited"]:
-            error_msg = res_data.get("text", "Ошибка при обработке ссылки через Cobalt")
-            return jsonify({'error': error_msg}), 400
-
-        direct_url = res_data.get("url") or res_data.get("picker", [{}])[0].get("url")
-
-        if not direct_url:
-            return jsonify({'error': 'Не удалось получить прямую ссылку на медиа'}), 400
-
+        # Перенаправляем запрос на наш чистый микросервис Fly.io
+        resp = requests.post(FLY_PROXY_URL, json={'url': url}, timeout=20)
+        
+        if resp.status_code != 200:
+            return jsonify({'error': 'Ошибка от прокси-сервера'}), 400
+            
+        res_data = resp.json()
+        
         video_data = {
-            'title': res_data.get('filename', 'Медиа файл'),
-            'duration': 0,
-            'thumbnail': '',
-            'direct_url': direct_url,
+            'title': res_data.get('title', 'Видео без названия'),
+            'duration': res_data.get('duration', 0),
+            'thumbnail': res_data.get('thumbnail', ''),
+            'direct_url': res_data.get('direct_url'),
             'formats': [
                 {
                     'format_id': 'best',
                     'resolution': 'HD / Best',
-                    'ext': 'mp4',
+                    'ext': res_data.get('ext', 'mp4'),
                     'filesize': 0
                 }
             ]
         }
-                
+                    
         return jsonify(video_data)
-        
+            
     except Exception as e:
         print(f"DEBUG ERROR: {str(e)}")
-        return jsonify({'error': 'Ошибка соединения с API загрузчика'}), 400
+        return jsonify({'error': 'Не удалось связаться с прокси'}), 400
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
