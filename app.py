@@ -1,19 +1,20 @@
 import os
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, render_template, request, send_from_directory
 
-app = Flask(__name__, static_folder='.', template_folder='.')
+# Указываем Flask, что шаблоны лежат в папке templates
+app = Flask(__name__, template_folder='templates', static_folder='static')
 
 
 @app.route('/')
 def serve_index():
-    return send_from_directory('.', 'index.html')
+    return render_template('index.html')
 
 
 @app.route('/<path:path>')
 def serve_static(path):
     if os.path.exists(path):
         return send_from_directory('.', path)
-    return send_from_directory('.', 'index.html')
+    return render_template('index.html')
 
 
 if __name__ == '__main__':
