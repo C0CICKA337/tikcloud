@@ -4,12 +4,6 @@ import yt_dlp
 
 app = Flask(__name__)
 
-# Автоматически создаем cookies.txt из переменной окружения на сервере Render
-cookies_content = os.environ.get("YOUTUBE_COOKIES")
-if cookies_content:
-    with open("cookies.txt", "w", encoding="utf-8") as f:
-        f.write(cookies_content)
-
 DOWNLOAD_FOLDER = 'downloads'
 os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
 
@@ -25,36 +19,33 @@ def youtube_info():
     if not url:
         return jsonify({'error': 'URL не указан'}), 400
 
+    # Ультра-простые и чистые настройки, как для TikTok
     ydl_opts = {
         'quiet': True,
         'no_warnings': True,
-        'geo_bypass': True,
-        # Притворяемся Android-клиентом, чтобы YouTube отдавал шортсы без ошибок форматов
-        'extractor_args': {
-            'youtube': {
-                'player_client': ['android', 'web']
-            }
-        },
-        'user_agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+        'format': 'best',
     }
-    
-    if os.path.exists('cookies.txt'):
-        ydl_opts['cookiefile'] = 'cookies.txt'
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
             
+            # Универсальный захват прямой ссылки на медиапоток
+            direct_url = info.get('url')
+            if not direct_url and 'entries' in info:
+                direct_url = info['entries'][0].get('url')
+
             video_data = {
                 'title': info.get('title', 'Видео без названия'),
                 'duration': info.get('duration', 0),
                 'thumbnail': info.get('thumbnail', ''),
+                'direct_url': direct_url,
                 'formats': [
                     {
                         'format_id': 'best',
-                        'resolution': 'HD / Shorts Best',
-                        'ext': 'mp4',
-                        'filesize': 0
+                        'resolution': 'Best Quality',
+                        'ext': info.get('ext', 'mp4'),
+                        'filesize': info.get('filesize') or info.get('filesize_approx') or 0
                     }
                 ]
             }
@@ -63,7 +54,7 @@ def youtube_info():
             
     except Exception as e:
         print(f"DEBUG ERROR: {str(e)}")
-        return jsonify({'error': 'Не удалось получить данные с YouTube'}), 400
+        return jsonify({'error': 'Не удалось получить данные с сервера'}), 400
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
