@@ -25,11 +25,11 @@ def youtube_info():
     if not url:
         return jsonify({'error': 'URL не указан'}), 400
 
+    # Оставляем только чистые настройки без принудительного формата
     ydl_opts = {
         'quiet': True,
         'no_warnings': True,
         'geo_bypass': True,
-        'format': 'best',  # Надежный выбор лучшего качества без ручного перебора потоков
         'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     }
     
@@ -38,21 +38,35 @@ def youtube_info():
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            # Вытягиваем информацию без параметров формата, чтобы yt_dlp не ругался
             info = ydl.extract_info(url, download=False)
             
             video_data = {
                 'title': info.get('title', 'Видео без названия'),
                 'duration': info.get('duration', 0),
                 'thumbnail': info.get('thumbnail', ''),
-                'formats': [
-                    {
-                        'format_id': 'best',
-                        'resolution': info.get('resolution') or 'Best Quality',
-                        'ext': info.get('ext', 'mp4'),
-                        'filesize': info.get('filesize') or info.get('filesize_approx') or 0
-                    }
-                ]
+                'formats': []
             }
+            
+            # Собираем доступные форматы гибко
+            formats = info.get('formats', [])
+            for f in formats:
+                if f.get('vcodec') != 'none' or f.get('acodec') != 'none':
+                    video_data['formats'].append({
+                        'format_id': f.get('format_id'),
+                        'resolution': f.get('format_note') or f.get('resolution') or 'HD',
+                        'ext': f.get('ext', 'mp4'),
+                        'filesize': f.get('filesize') or f.get('filesize_approx') or 0
+                    })
+            
+            # Если вдруг список пустой, даем заглушку
+            if not video_data['formats']:
+                video_data['formats'].append({
+                    'format_id': 'best',
+                    'resolution': 'Best Quality',
+                    'ext': 'mp4',
+                    'filesize': 0
+                })
                     
             return jsonify(video_data)
             
