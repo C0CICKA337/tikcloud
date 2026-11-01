@@ -29,7 +29,13 @@ def youtube_info():
         'quiet': True,
         'no_warnings': True,
         'geo_bypass': True,
-        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        # Притворяемся Android-клиентом, чтобы YouTube отдавал шортсы без ошибок форматов
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['android', 'web']
+            }
+        },
+        'user_agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
     }
     
     if os.path.exists('cookies.txt'):
@@ -37,7 +43,6 @@ def youtube_info():
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            # Используем safe extract с подавлением строгой проверки форматов
             info = ydl.extract_info(url, download=False)
             
             video_data = {
@@ -47,7 +52,7 @@ def youtube_info():
                 'formats': [
                     {
                         'format_id': 'best',
-                        'resolution': 'HD / Best',
+                        'resolution': 'HD / Shorts Best',
                         'ext': 'mp4',
                         'filesize': 0
                     }
