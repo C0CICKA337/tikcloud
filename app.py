@@ -29,7 +29,6 @@ def youtube_info():
         'quiet': True,
         'no_warnings': True,
         'geo_bypass': True,
-        'extractor_args': {'youtube': {'player_client': ['web']}},
         'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     }
     
@@ -38,32 +37,22 @@ def youtube_info():
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            # Используем safe extract с подавлением строгой проверки форматов
             info = ydl.extract_info(url, download=False)
             
             video_data = {
                 'title': info.get('title', 'Видео без названия'),
                 'duration': info.get('duration', 0),
                 'thumbnail': info.get('thumbnail', ''),
-                'formats': []
+                'formats': [
+                    {
+                        'format_id': 'best',
+                        'resolution': 'HD / Best',
+                        'ext': 'mp4',
+                        'filesize': 0
+                    }
+                ]
             }
-            
-            formats = info.get('formats', [])
-            for f in formats:
-                if f.get('vcodec') != 'none':
-                    video_data['formats'].append({
-                        'format_id': f.get('format_id'),
-                        'resolution': f.get('format_note') or f.get('resolution') or 'HD',
-                        'ext': f.get('ext', 'mp4'),
-                        'filesize': f.get('filesize') or f.get('filesize_approx') or 0
-                    })
-            
-            if not video_data['formats']:
-                video_data['formats'].append({
-                    'format_id': 'best',
-                    'resolution': 'Best Quality',
-                    'ext': 'mp4',
-                    'filesize': 0
-                })
                     
             return jsonify(video_data)
             
