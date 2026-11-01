@@ -1,148 +1,240 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TikCloud — Скачивание видео</title>
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        }
-        body {
-            background-color: #0f1015;
-            color: #ffffff;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-        }
-        .container {
-            width: 100%;
-            max-width: 600px;
-            padding: 20px;
-            text-align: center;
-        }
-        h1 {
-            margin-bottom: 24px;
-            font-size: 2rem;
-            color: #ff3366;
-        }
-        .input-group {
-            display: flex;
-            gap: 10px;
-            background: #1a1c23;
-            padding: 8px;
-            border-radius: 12px;
-            border: 1px solid #2a2d3d;
-        }
-        input {
-            flex: 1;
-            background: transparent;
-            border: none;
-            outline: none;
-            color: #fff;
-            font-size: 1rem;
-            padding: 0 10px;
-        }
-        button {
-            background: #ff3366;
-            color: #white;
-            border: none;
-            padding: 12px 24px;
-            font-size: 1rem;
-            font-weight: bold;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        button:hover {
-            background: #e02e5b;
-        }
-        #resultContainer {
-            margin-top: 20px;
-            padding: 15px;
-            border-radius: 8px;
-            background: #1a1c23;
-            border: 1px solid #2a2d3d;
-            display: none;
-            word-break: break-all;
-        }
-        .download-btn {
-            display: inline-block;
-            margin-top: 10px;
-            background: #00C853;
-            color: white;
-            padding: 10px 20px;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: bold;
-        }
-        .download-btn:hover {
-            background: #00b048;
-        }
-        .error-text {
-            color: #ff5252;
-        }
-    </style>
+    <title>TikCloud — Универсальный загрузчик контента</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
 </head>
-<body>
-
-    <div class="container">
-        <h1>TikCloud Downloader</h1>
-        <div class="input-group">
-            <input type="text" id="urlInput" placeholder="Вставь ссылку на TikTok или YouTube...">
-            <button id="submitBtn">Найти</button>
+<body class="bg-gray-100 dark:bg-[#0b0f19] text-gray-900 dark:text-white min-h-screen flex flex-col justify-between selection:bg-pink-500 selection:text-white transition-colors duration-300">
+    
+    <!-- Верхняя панель -->
+    <header class="w-full max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="bg-gradient-to-tr from-pink-500 to-indigo-600 p-2 rounded-xl shadow-lg flex items-center justify-center">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path></svg>
+            </div>
+            <span class="text-xl font-bold tracking-wide">TikCloud</span>
         </div>
-        <div id="resultContainer"></div>
-    </div>
+
+        <div class="flex items-center gap-3">
+            <button onclick="toggleTheme()" class="bg-white dark:bg-[#161b26] hover:bg-gray-200 dark:hover:bg-[#1f2636] border border-gray-300 dark:border-gray-800 p-2.5 rounded-full text-gray-700 dark:text-gray-300 transition shadow-sm" title="Сменить тему">
+                <svg id="themeIcon" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+            </button>
+            <div class="flex items-center gap-2 bg-white dark:bg-[#161b26] border border-gray-300 dark:border-gray-800 px-3.5 py-2 rounded-full text-xs font-medium text-gray-800 dark:text-gray-200 shadow-sm">
+                <span class="text-sky-500">⚡</span> Multi-Engine
+            </div>
+        </div>
+    </header>
+
+    <!-- Основной контент -->
+    <main class="w-full max-w-xl mx-auto px-4 flex flex-col items-center my-auto -mt-12">
+        <h1 class="text-4xl font-extrabold tracking-tight text-center mb-3">
+            Загрузчик <span class="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-teal-400">TikCloud</span>
+        </h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 text-center mb-8">
+            Скачивайте видео, Shorts и MP3 из TikTok и YouTube в один клик.
+        </p>
+
+        <!-- Единая строка ввода ссылки -->
+        <div class="w-full bg-white dark:bg-[#131824] rounded-2xl shadow-xl p-3 border border-gray-300 dark:border-gray-800 flex items-center gap-2 transition-colors duration-300">
+            <div class="relative flex-1 flex items-center">
+                <span class="absolute left-4 text-gray-400 dark:text-gray-500">🔗</span>
+                <input type="text" id="urlInput" placeholder="Вставьте ссылку на TikTok или YouTube (видео / Shorts)..." 
+                       class="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-[#0d111a] rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 text-sm border border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 transition-colors duration-300">
+            </div>
+            <button onclick="handleSearch()" id="searchBtn" 
+                    class="bg-pink-600 hover:bg-pink-700 px-6 py-3 rounded-xl font-semibold transition flex items-center gap-2 shadow-lg shadow-pink-600/25 text-sm whitespace-nowrap text-white">
+                🔍 Найти
+            </button>
+        </div>
+
+        <!-- Блок ошибок -->
+        <div id="errorBox" class="hidden w-full mt-4 p-4 bg-red-100 dark:bg-red-950/80 border border-red-400 dark:border-red-500/50 rounded-xl text-red-700 dark:text-red-200 text-xs"></div>
+
+        <!-- Блок результата для TikTok / Простых видео -->
+        <div id="resultBoxStandard" class="hidden w-full bg-white dark:bg-[#131824] rounded-2xl shadow-xl p-4 border border-gray-300 dark:border-gray-800 mt-4 space-y-4 transition-colors duration-300">
+            <div class="flex gap-4 items-center bg-gray-50 dark:bg-[#0d111a] p-3 rounded-xl border border-gray-200 dark:border-gray-800">
+                <img id="thumbStandard" class="w-20 h-20 object-cover rounded-lg bg-gray-200 dark:bg-gray-800" src="" alt="Thumbnail">
+                <div class="flex-1 min-w-0">
+                    <h2 id="titleStandard" class="font-medium text-xs text-gray-800 dark:text-gray-200 line-clamp-2"></h2>
+                </div>
+            </div>
+
+            <button onclick="downloadStandardMedia('video')" class="w-full py-3.5 bg-pink-600 hover:bg-pink-700 rounded-xl font-semibold text-xs text-center transition shadow-md text-white flex items-center justify-center gap-2">
+                📥 Скачать видео без водяного знака
+            </button>
+
+            <button onclick="downloadStandardMedia('audio')" class="w-full py-3 bg-gray-200 dark:bg-[#1c2333] hover:bg-gray-300 dark:hover:bg-[#252f45] text-gray-800 dark:text-white rounded-xl font-semibold text-xs text-center transition border border-gray-300 dark:border-gray-700 flex items-center justify-center gap-2">
+                🎵 Скачать аудио (MP3)
+            </button>
+        </div>
+
+        <!-- Блок результата для YouTube (с выбором качества) -->
+        <div id="resultBoxYoutube" class="hidden w-full bg-white dark:bg-[#131824] rounded-2xl shadow-xl p-4 border border-gray-300 dark:border-gray-800 mt-4 space-y-4 transition-colors duration-300">
+            <div class="flex gap-4 items-center bg-gray-50 dark:bg-[#0d111a] p-3 rounded-xl border border-gray-200 dark:border-gray-800">
+                <img id="thumbYoutube" class="w-20 h-20 object-cover rounded-lg bg-gray-200 dark:bg-gray-800" src="" alt="Thumbnail">
+                <div class="flex-1 min-w-0">
+                    <h2 id="titleYoutube" class="font-medium text-xs text-gray-800 dark:text-gray-200 line-clamp-2"></h2>
+                </div>
+            </div>
+
+            <!-- Выбор качества для YouTube -->
+            <div class="flex gap-2 items-center">
+                <select id="ytQualitySelect" class="flex-1 bg-gray-50 dark:bg-[#0d111a] border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-200 text-xs rounded-xl px-3 py-3.5 focus:outline-none focus:ring-2 focus:ring-pink-500">
+                    <!-- Заполняется динамически -->
+                </select>
+                <button onclick="downloadYouTubeMedia('video')" class="py-3.5 px-6 bg-pink-600 hover:bg-pink-700 rounded-xl font-semibold text-xs text-center transition shadow-md text-white whitespace-nowrap">
+                    📥 Скачать видео
+                </button>
+            </div>
+
+            <button onclick="downloadYouTubeMedia('audio')" class="w-full py-3 bg-gray-200 dark:bg-[#1c2333] hover:bg-gray-300 dark:hover:bg-[#252f45] text-gray-800 dark:text-white rounded-xl font-semibold text-xs text-center transition border border-gray-300 dark:border-gray-700 flex items-center justify-center gap-2">
+                🎵 Скачать аудио (MP3)
+            </button>
+        </div>
+    </main>
+
+    <!-- Подвал -->
+    <footer class="w-full text-center text-xs text-gray-500 dark:text-gray-500 py-6 border-t border-gray-200 dark:border-gray-900">
+        © 2026 TikCloud. Все права защищены.
+    </footer>
 
     <script>
-        const urlInput = document.getElementById('urlInput');
-        const submitBtn = document.getElementById('submitBtn');
-        const resultContainer = document.getElementById('resultContainer');
+        let cachedTikTokData = null;
+        let currentYouTubeUrl = '';
 
-        submitBtn.addEventListener('click', async () => {
-            const videoUrl = urlInput.value.trim();
-            if (!videoUrl) return;
+        function toggleTheme() {
+            const html = document.documentElement;
+            const themeIcon = document.getElementById('themeIcon');
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                themeIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>';
+                localStorage.setItem('theme', 'light');
+            } else {
+                html.classList.add('dark');
+                themeIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>';
+                localStorage.setItem('theme', 'dark');
+            }
+        }
 
-            resultContainer.style.display = 'block';
-            resultContainer.innerHTML = 'Загрузка...';
-
-            try {
-                // Отправляем запрос через публичный клиентский API (запросы идут с IP пользователя)
-                const response = await fetch('https://api.cobalt.tools/api/json', {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ url: videoUrl })
-                });
-
-                const data = await response.json();
-
-                if (data.status === 'error' || data.error || !data.url && !data.picker) {
-                    throw new Error(data.text || data.message || 'Не удалось получить видео');
-                }
-
-                // Достаем ссылку на скачивание
-                const downloadUrl = data.url || (data.picker && data.picker[0] && data.picker[0].url);
-
-                resultContainer.innerHTML = `
-                    <p style="margin-bottom: 10px;"><b>Название:</b> ${data.filename || 'Видео готово'}</p>
-                    <a href="${downloadUrl}" target="_blank" class="download-btn">Скачать видео</a>
-                `;
-
-            } catch (err) {
-                resultContainer.innerHTML = `<p class="error-text">Ошибка: ${err.message}</p>`;
-                console.error(err);
+        window.addEventListener('DOMContentLoaded', () => {
+            if (localStorage.getItem('theme') === 'light') {
+                document.documentElement.classList.remove('dark');
+                document.getElementById('themeIcon').innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>';
             }
         });
-    </script>
 
+        async function handleSearch() {
+            const url = document.getElementById('urlInput').value.trim();
+            const errorBox = document.getElementById('errorBox');
+            const resStandard = document.getElementById('resultBoxStandard');
+            const resYoutube = document.getElementById('resultBoxYoutube');
+            const searchBtn = document.getElementById('searchBtn');
+
+            errorBox.classList.add('hidden');
+            resStandard.classList.add('hidden');
+            resYoutube.classList.add('hidden');
+            cachedTikTokData = null;
+            currentYouTubeUrl = '';
+
+            if (!url) {
+                errorBox.innerText = 'Пожалуйста, введите ссылку';
+                errorBox.classList.remove('hidden');
+                return;
+            }
+
+            searchBtn.disabled = true;
+            searchBtn.innerText = 'Поиск...';
+
+            // Определяем, куда ведет ссылка (YouTube или TikTok)
+            if (url.includes('youtube.com') || url.includes('youtu.be')) {
+                currentYouTubeUrl = url;
+                try {
+                    const res = await fetch('/api/youtube-info', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url })
+                    });
+                    const data = await res.json();
+
+                    if (data.error) throw new Error(data.error);
+
+                    document.getElementById('titleYoutube').innerText = data.title;
+                    document.getElementById('thumbYoutube').src = data.thumbnail;
+
+                    // Заполняем селект качествами
+                    const select = document.getElementById('ytQualitySelect');
+                    select.innerHTML = '';
+                    data.formats.forEach(f => {
+                        select.innerHTML += `<option value="${f.format_id}">🎥 Видео ${f.height}p (${f.ext})</option>`;
+                    });
+
+                    resYoutube.classList.remove('hidden');
+                } catch (err) {
+                    errorBox.innerText = err.message || 'Ошибка обработки YouTube ссылки';
+                    errorBox.classList.remove('hidden');
+                } finally {
+                    searchBtn.disabled = false;
+                    searchBtn.innerText = '🔍 Найти';
+                }
+            } else {
+                // Обработка TikTok через публичный фронтенд-запрос
+                try {
+                    const res = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(url)}&hd=1`);
+                    const data = await res.json();
+
+                    if (data.code !== 0) throw new Error('Не удалось найти видео TikTok.');
+
+                    cachedTikTokData = data.data;
+                    document.getElementById('titleStandard').innerText = cachedTikTokData.title || 'Видео TikTok';
+                    document.getElementById('thumbStandard').src = cachedTikTokData.cover || '';
+                    resStandard.classList.remove('hidden');
+                } catch (err) {
+                    errorBox.innerText = err.message || 'Ошибка загрузки данных TikTok';
+                    errorBox.classList.remove('hidden');
+                } finally {
+                    searchBtn.disabled = false;
+                    searchBtn.innerText = '🔍 Найти';
+                }
+            }
+        }
+
+        async function downloadStandardMedia(type) {
+            if (!cachedTikTokData) return;
+            const mediaLink = type === 'audio' ? cachedTikTokData.music : (cachedTikTokData.hdplay || cachedTikTokData.play);
+            const randomId = Math.floor(1000 + Math.random() * 9000);
+            const fileName = `clip_TikCloud_${randomId}.${type === 'audio' ? 'mp3' : 'mp4'}`;
+
+            try {
+                const res = await fetch(mediaLink);
+                const blob = await res.blob();
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(downloadUrl);
+            } catch (err) {
+                window.open(mediaLink, '_blank');
+            }
+        }
+
+        function downloadYouTubeMedia(type) {
+            if (!currentYouTubeUrl) return;
+            const formatId = document.getElementById('ytQualitySelect').value;
+            const downloadUrl = `/api/download-youtube?url=${encodeURIComponent(currentYouTubeUrl)}&format_id=${formatId}&type=${type}`;
+            
+            // Запускаем скачивание напрямую через ссылку на бэкенд
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.click();
+        }
+    </script>
 </body>
 </html>

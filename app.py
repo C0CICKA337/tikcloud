@@ -1,6 +1,7 @@
 import os
 from flask import Flask, render_template, request, send_from_directory
 
+# Указываем Flask, что шаблоны лежат в папке templates
 app = Flask(__name__, template_folder='templates', static_folder='static')
 
 
