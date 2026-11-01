@@ -1,11 +1,14 @@
 import os
+import requests
 from flask import Flask, render_template, request, jsonify
-import yt_dlp
 
 app = Flask(__name__)
 
 DOWNLOAD_FOLDER = 'downloads'
 os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
+
+# Официальный или любой стабильный публичный инстанс Cobalt API
+COBALT_API_URL = "https://api.cobalt.tools/api/json"
 
 @app.route('/')
 def index():
@@ -19,48 +22,52 @@ def youtube_info():
     if not url:
         return jsonify({'error': 'URL не указан'}), 400
 
-    # Настройки yt-dlp с прокси и эмуляцией Android-клиента для обхода бота
-    ydl_opts = {
-        'quiet': True,
-        'no_warnings': True,
-        'geo_bypass': True,
-        'proxy': 'socks5://45.74.31.41:10054',
-        'extractor_args': {
-            'youtube': {
-                'player_client': ['android', 'web']
-            }
-        },
-        'user_agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    }
+    
+    payload = {
+        "url": url,
+        "videoQuality": "max"
     }
 
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
-            
-            direct_url = info.get('url')
-            if not direct_url and 'entries' in info:
-                direct_url = info['entries'][0].get('url')
+        # Делаем запрос к Cobalt API вместо тяжелого локального yt-dlp
+        response = requests.post(COBALT_API_URL, json=payload, headers=headers, timeout=15)
+        res_data = response.json()
 
-            video_data = {
-                'title': info.get('title', 'Видео без названия'),
-                'duration': info.get('duration', 0),
-                'thumbnail': info.get('thumbnail', ''),
-                'direct_url': direct_url,
-                'formats': [
-                    {
-                        'format_id': 'best',
-                        'resolution': 'Best Quality',
-                        'ext': info.get('ext', 'mp4'),
-                        'filesize': info.get('filesize') or info.get('filesize_approx') or 0
-                    }
-                ]
-            }
-                    
-            return jsonify(video_data)
-            
+        if response.status_code != 200 or res_data.get("status") in ["error", "rate-limited"]:
+            error_msg = res_data.get("text", "Ошибка при обработке ссылки через Cobalt")
+            return jsonify({'error': error_msg}), 400
+
+        # Cobalt может вернуть разные типы ответа (redirect, tunnel, picker)
+        status = res_data.get("status")
+        direct_url = res_data.get("url") or res_data.get("picker", [{}])[0].get("url")
+
+        if not direct_url:
+            return jsonify({'error': 'Не удалось получить прямую ссылку на медиа'}), 400
+
+        video_data = {
+            'title': res_data.get('filename', 'Медиа файл'),
+            'duration': 0,
+            'thumbnail': '',
+            'direct_url': direct_url,
+            'formats': [
+                {
+                    'format_id': 'best',
+                    'resolution': 'HD / Best',
+                    'ext': 'mp4',
+                    'filesize': 0
+                }
+            ]
+        }
+                
+        return jsonify(video_data)
+        
     except Exception as e:
         print(f"DEBUG ERROR: {str(e)}")
-        return jsonify({'error': 'Не удалось получить данные через прокси'}), 400
+        return jsonify({'error': 'Ошибка соединения с API загрузчика'}), 400
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
