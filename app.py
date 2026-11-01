@@ -27,14 +27,12 @@ def youtube_info():
     if not url:
         return jsonify({'error': 'URL не указан'}), 400
 
-    # Общие параметры для yt-dlp с поддержкой cookies
     ydl_opts = {
         'quiet': True,
         'no_warnings': True,
         'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     }
     
-    # Если файл cookies.txt успешно создался, подключаем его
     if os.path.exists('cookies.txt'):
         ydl_opts['cookiefile'] = 'cookies.txt'
 
@@ -42,7 +40,6 @@ def youtube_info():
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
             
-            # Собираем базовую информацию о видео/шортсе
             video_data = {
                 'title': info.get('title', 'Видео без названия'),
                 'duration': info.get('duration', 0),
@@ -50,15 +47,26 @@ def youtube_info():
                 'formats': []
             }
             
-            # Доступные форматы для скачивания
-            for f in info.get('formats', []):
-                if f.get('ext') in ['mp4', 'webm']:
-                    video_data['formats'].append({
-                        'format_id': f.get('format_id'),
-                        'resolution': f.get('format_note') or f.get('resolution') or 'unknown',
-                        'ext': f.get('ext'),
-                        'filesize': f.get('filesize') or f.get('filesize_approx') or 0
-                    })
+            # Универсальный сбор доступных видеопотоков (актуально для Shorts и видео)
+            formats = info.get('formats', [])
+            if formats:
+                for f in formats:
+                    if f.get('vcodec') != 'none':
+                        video_data['formats'].append({
+                            'format_id': f.get('format_id'),
+                            'resolution': f.get('format_note') or f.get('resolution') or 'HD',
+                            'ext': f.get('ext', 'mp4'),
+                            'filesize': f.get('filesize') or f.get('filesize_approx') or 0
+                        })
+            
+            # Если специфичные форматы не отфильтровались, добавляем универсальный вариант
+            if not video_data['formats']:
+                video_data['formats'].append({
+                    'format_id': 'best',
+                    'resolution': 'Best Quality',
+                    'ext': 'mp4',
+                    'filesize': 0
+                })
                     
             return jsonify(video_data)
             
