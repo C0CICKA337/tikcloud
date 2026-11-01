@@ -1,0 +1,3 @@
+temp_downloads/
+__pycache__/
+.env
