@@ -19,18 +19,24 @@ def youtube_info():
     if not url:
         return jsonify({'error': 'URL не указан'}), 400
 
-    # Ультра-простые и чистые настройки, как для TikTok
+    # Настройки yt-dlp с прокси и эмуляцией Android-клиента для обхода бота
     ydl_opts = {
         'quiet': True,
         'no_warnings': True,
-        'format': 'best',
+        'geo_bypass': True,
+        'proxy': 'socks5://45.74.31.41:10054',
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['android', 'web']
+            }
+        },
+        'user_agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
     }
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
             
-            # Универсальный захват прямой ссылки на медиапоток
             direct_url = info.get('url')
             if not direct_url and 'entries' in info:
                 direct_url = info['entries'][0].get('url')
@@ -54,7 +60,7 @@ def youtube_info():
             
     except Exception as e:
         print(f"DEBUG ERROR: {str(e)}")
-        return jsonify({'error': 'Не удалось получить данные с сервера'}), 400
+        return jsonify({'error': 'Не удалось получить данные через прокси'}), 400
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
