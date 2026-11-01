@@ -1,7 +1,20 @@
+import os
 import yt_dlp
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='.')
+
+
+@app.route('/')
+def serve_index():
+    return send_from_directory('.', 'index.html')
+
+
+@app.route('/<path:path>')
+def serve_static(path):
+    if os.path.exists(path):
+        return send_from_directory('.', path)
+    return send_from_directory('.', 'index.html')
 
 
 @app.route('/api/youtube-info', methods=['POST'])
