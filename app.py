@@ -1,7 +1,7 @@
 import os
-import re
 import requests
 from flask import Flask, render_template, request, send_from_directory, jsonify, Response, stream_with_context
+import yt_dlp
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
 
@@ -16,58 +16,67 @@ def get_pinterest_video():
         return jsonify({'code': 1, 'msg': 'URL не указан'})
 
     try:
-        # Используем сессию, чтобы сохранять cookies при редиректах (важно для pin.it)
-        session = requests.Session()
-        
-        # Расширенные заголовки, чтобы сервер выглядел как 100% реальный браузер
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-            'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
-            'Upgrade-Insecure-Requests': '1',
-            'Sec-Fetch-Dest': 'document',
-            'Sec-Fetch-Mode': 'navigate',
-            'Sec-Fetch-Site': 'none',
-            'Sec-Fetch-User': '?1'
+        # Настройки yt-dlp для извлечения прямой ссылки без скачивания на диск
+        ydl_opts = {
+            'quiet': True,
+            'format': 'best',
+            'nocheckcertificate': True
         }
         
-        response = session.get(url, headers=headers, timeout=15, allow_redirects=True)
-        html = response.text
-
-        # 1. Пробуем найти ссылку в JSON-данных страницы
-        video_match = re.search(r'"contentUrl"\s*:\s*"([^"]+\.mp4)"', html)
-        
-        # 2. Ищем любые прямые ссылки на видео от пинтереста
-        if not video_match:
-            video_match = re.search(r'(https://[a-zA-Z0-9-]+\.pinimg\.com/[^"\']+\.mp4)', html)
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            # Парсим ссылку (yt-dlp сам пройдет по редиректу pin.it и найдет видео)
+            info = ydl.extract_info(url, download=False)
             
-        # 3. Ищем ссылки с экранированными слешами
-        if not video_match:
-            video_match = re.search(r'(https:\\/\\/[a-zA-Z0-9-]+\.pinimg\.com\\/[^"\']+\.mp4)', html)
-
-        if not video_match:
-            # Для отладки: если видео снова не найдется, сервер вернет часть HTML, чтобы понять, заблокировал ли нас Pinterest
-            return jsonify({'code': 1, 'msg': 'Видео не найдено. Убедитесь, что это пин с видео.'})
-
-        # Очищаем ссылку от экранирования, если оно было
-        video_url = video_match.group(1).replace('\\/', '/')
-
-        # Ищем обложку
-        cover_match = re.search(r'"thumbnailUrl"\s*:\s*"([^"]+\.jpg)"', html)
-        cover_url = cover_match.group(1).replace('\\/', '/') if cover_match else ""
-
-        # Ищем заголовок
-        title_match = re.search(r'<title>(.*?)</title>', html)
-        title = title_match.group(1).replace(' | Pinterest', '') if title_match else "Pinterest Video"
-
-        return jsonify({
-            'code': 0,
-            'data': {
-                'title': title,
-                'cover': cover_url,
-                'video': video_url
-            }
-        })
-
+            video_url = info.get('url')
+            title = info.get('title', 'Pinterest Video')
+            cover = info.get('thumbnail', '')
+            
+            if not video_url:
+                return jsonify({'code': 1, 'msg': 'Видео не найдено в этом пине'})
+                
+            return jsonify({
+                'code': 0,
+                'data': {
+                    'title': title,
+                    'cover': cover,
+                    'video': video_url
+                }
+            })
+            
     except Exception as e:
-        return jsonify({'code': 1, 'msg': 'Ошибка при обработке ссылки. Сервер Pinterest не отвечает.'})
+        return jsonify({'code': 1, 'msg': f'Ошибка при обработке: проверьте ссылку или приватность пина'})
+
+# Эндпоинт для принудительного скачивания (чтобы файл не открывался в новой вкладке)
+@app.route('/download')
+def download_media():
+    url = request.args.get('url')
+    file_type = request.args.get('type', 'video')
+    
+    if not url:
+        return "URL не указан", 400
+
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+        r = requests.get(url, stream=True, headers=headers)
+        
+        ext = 'mp3' if file_type == 'audio' else 'mp4'
+        filename = f"TikCloud_media.{ext}"
+
+        return Response(
+            stream_with_context(r.iter_content(chunk_size=8192)),
+            content_type=r.headers.get('Content-Type', f'video/{ext}'),
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    except Exception as e:
+        return f"Ошибка скачивания: {str(e)}", 500
+
+@app.route('/<path:path>')
+def serve_static(path):
+    if os.path.exists(path):
+        return send_from_directory('.', path)
+    return render_template('index.html')
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8080)
