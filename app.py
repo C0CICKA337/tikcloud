@@ -1,7 +1,6 @@
 import os
 import requests
 from flask import Flask, render_template, request, send_from_directory, jsonify, Response, stream_with_context
-import yt_dlp
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
 
@@ -16,37 +15,42 @@ def get_pinterest_video():
         return jsonify({'code': 1, 'msg': 'URL не указан'})
 
     try:
-        # Настройки yt-dlp для извлечения прямой ссылки без скачивания на диск
-        ydl_opts = {
-            'quiet': True,
-            'format': 'best',
-            'nocheckcertificate': True
+        # Обращаемся к мощному стороннему API (Cobalt) для обхода блокировок Pinterest
+        headers = {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
         
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            # Парсим ссылку (yt-dlp сам пройдет по редиректу pin.it и найдет видео)
-            info = ydl.extract_info(url, download=False)
-            
-            video_url = info.get('url')
-            title = info.get('title', 'Pinterest Video')
-            cover = info.get('thumbnail', '')
-            
-            if not video_url:
-                return jsonify({'code': 1, 'msg': 'Видео не найдено в этом пине'})
-                
-            return jsonify({
-                'code': 0,
-                'data': {
-                    'title': title,
-                    'cover': cover,
-                    'video': video_url
-                }
-            })
-            
-    except Exception as e:
-        return jsonify({'code': 1, 'msg': f'Ошибка при обработке: проверьте ссылку или приватность пина'})
+        # Настройки для Cobalt API
+        payload = {
+            "url": url,
+            "vCodec": "h264",
+            "isNoAudio": False
+        }
+        
+        # Делаем POST-запрос к API
+        response = requests.post('https://api.cobalt.tools/api/json', json=payload, headers=headers, timeout=15)
+        data = response.json()
 
-# Эндпоинт для принудительного скачивания (чтобы файл не открывался в новой вкладке)
+        # Если API вернул ошибку
+        if data.get('status') == 'error' or not data.get('url'):
+            return jsonify({'code': 1, 'msg': 'Видео не найдено или пин приватный.'})
+
+        video_url = data.get('url')
+
+        return jsonify({
+            'code': 0,
+            'data': {
+                'title': 'Видео Pinterest',
+                'cover': '', # Сторонний API отдает сразу видео без превью
+                'video': video_url
+            }
+        })
+
+    except Exception as e:
+        return jsonify({'code': 1, 'msg': 'Сервис временно недоступен. Попробуйте позже.'})
+
 @app.route('/download')
 def download_media():
     url = request.args.get('url')
