@@ -1,4 +1,5 @@
 import os
+import re
 import requests
 from flask import Flask, render_template, request, send_from_directory, jsonify, Response, stream_with_context
 
@@ -15,41 +16,43 @@ def get_pinterest_video():
         return jsonify({'code': 1, 'msg': 'URL не указан'})
 
     try:
-        # Обращаемся к мощному стороннему API (Cobalt) для обхода блокировок Pinterest
         headers = {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         }
         
-        # Настройки для Cobalt API
-        payload = {
-            "url": url,
-            "vCodec": "h264",
-            "isNoAudio": False
-        }
+        response = requests.get(url, headers=headers, timeout=15, allow_redirects=True)
+        if response.status_code != 200:
+            return jsonify({'code': 1, 'msg': 'Не удалось загрузить страницу пина'})
+
+        # Пинтерест прячет ссылки в JSON и экранирует слеши. Снимаем экранирование.
+        html_text = response.text.replace('\\/', '/')
         
-        # Делаем POST-запрос к API
-        response = requests.post('https://api.cobalt.tools/api/json', json=payload, headers=headers, timeout=15)
-        data = response.json()
+        # Ищем вообще все ссылки на .mp4
+        mp4_links = re.findall(r'https://[^"\'\s]+\.mp4', html_text)
+        
+        video_url = None
+        # Ищем среди найденных ту, что принадлежит Pinterest
+        for link in mp4_links:
+            if 'pinimg.com' in link:
+                video_url = link
+                # Если нашли в хорошем качестве — сразу берем её
+                if '720p' in link or '1080p' in link:
+                    break
 
-        # Если API вернул ошибку
-        if data.get('status') == 'error' or not data.get('url'):
-            return jsonify({'code': 1, 'msg': 'Видео не найдено или пин приватный.'})
-
-        video_url = data.get('url')
+        if not video_url:
+            return jsonify({'code': 1, 'msg': 'Видео не найдено. Возможно, это картинка или приватный пин.'})
 
         return jsonify({
             'code': 0,
             'data': {
                 'title': 'Видео Pinterest',
-                'cover': '', # Сторонний API отдает сразу видео без превью
+                'cover': '',
                 'video': video_url
             }
         })
 
     except Exception as e:
-        return jsonify({'code': 1, 'msg': 'Сервис временно недоступен. Попробуйте позже.'})
+        return jsonify({'code': 1, 'msg': f'Ошибка: {str(e)}'})
 
 @app.route('/download')
 def download_media():
